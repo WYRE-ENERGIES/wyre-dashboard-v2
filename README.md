@@ -1,21 +1,152 @@
-# Next.js template
+# Wyre Dashboard
 
-This is a Next.js template with shadcn/ui.
+The new Wyre customer dashboard: energy monitoring and cost tracking for commercial
+customers' branches (utility, generators, solar, battery and IPP). It replaces the old
+Create React App dashboard (`wyre-dashboard`) and is being rebuilt page by page.
 
-## Adding components
+Built with **Next.js 16** (App Router), **React 19**, **TypeScript**, **Tailwind CSS 4**,
+**shadcn/ui** (preset `bjuA18xnc`, Base UI primitives), **TanStack Query** and **Recharts**.
 
-To add components to your app, run the following command:
+## Status
+
+| Area | State |
+| --- | --- |
+| Sign in, forgot password, reset password | Done |
+| App shell: sidebar, branch switcher, global period and device filters | Done |
+| Dashboard overview | Done |
+| Diesel, Solar, Parameters, Score Card, Cost Tracker, Billing, Report, Alerts… | Listed as "Soon" in the sidebar |
+
+The full feature inventory of the old app, with product decisions for the rebuild, lives
+in the old repo under `docs/rebuild/inventory/` (start with `00-overview.md`).
+
+## Getting started
+
+### Prerequisites
+
+- **Node.js 20.9 or later** (developed on Node 24)
+- **npm** (the repo uses `package-lock.json`)
+
+### Install and run
 
 ```bash
-npx shadcn@latest add button
+git clone <repo-url> new-wyre-dashboard
+cd new-wyre-dashboard
+npm install
+cp .env.example .env.local
+npm run dev
 ```
 
-This will place the ui components in the `components` directory.
+Open [http://localhost:3000](http://localhost:3000). It redirects to `/login`.
 
-## Using components
+To use another port: `npm run dev -- -p 3100`.
 
-To use the components in your app, import them as follows:
+### Demo mode or real backend
 
-```tsx
-import { Button } from "@/components/ui/button";
+`.env.example` turns on **demo mode**, so the app runs with no backend and no real account.
+
+| | Demo mode (`NEXT_PUBLIC_WYRE_DEMO=1`) | Real backend (unset or `0`) |
+| --- | --- | --- |
+| Data | Generated sample data for three demo branches | Live data from the Wyre API |
+| Sign in | Any username and password | Your Wyre credentials |
+| Branch switching | Switches between demo branches | Swaps the session token, like the old app |
+
+Demo shortcuts for testing:
+
+- **Sign-in error:** use the password `wrong`.
+- **Reset link expired or invalid:** open `/confirm-reset-password?token=expired` or `?token=invalid`. Any other token shows the new-password form.
+- **Getting back to the auth pages:** sign out from the user menu at the bottom of the sidebar.
+
+`NEXT_PUBLIC_*` variables are read at build time, so restart `npm run dev` after changing them.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_WYRE_DEMO` | unset | `1` turns on demo mode |
+| `WYRE_BACKEND_URL` | `https://backend.wyreng.com` | Backend the server-side proxy forwards `/api/*` to |
+| `NEXT_PUBLIC_WYRE_MEDIA_URL` | `https://backend.wyreng.com` | Host for media paths returned by the API, such as client logos |
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
+| `npm run format` | Prettier, with Tailwind class sorting |
+
+## Project structure
+
 ```
+src/
+  app/
+    (auth)/            Sign-in and password pages, plus their branded layout
+      login/
+      reset-password/            Forgot password (same path as the old app)
+      confirm-reset-password/    Set a new password from the emailed ?token=
+    (main-pages)/      Signed-in pages; layout.tsx wraps them in the app shell
+      dashboard/
+    api/               Same-origin proxy to the Wyre backend
+      v1/[...path]/              /api/v1/* → {WYRE_BACKEND_URL}/api/v1/*
+      token/refresh/             /api/token/refresh/ → {WYRE_BACKEND_URL}/token/refresh/
+    globals.css        Theme tokens: brand colours, charts, light and dark
+    providers.tsx      React Query, session, tooltips, toasts
+  components/
+    ui/                shadcn/ui components (add more with `npx shadcn@latest add …`)
+    auth/              Auth page pieces (feature carousel, password input…)
+    dashboard/         Dashboard cards and charts
+    app-shell.tsx      Sidebar + filter bar + redirect to /login when signed out
+    period-picker.tsx  Global Day / Month / Year picker
+    device-filter.tsx  Global device filter
+  lib/
+    api/               API client (auth header, token refresh), typed endpoints, response types
+    auth/session.ts    Token storage and JWT claims
+    period.ts          Period model, granularity rule, date formats for the API
+    gating.ts          Which features a user sees (role, client type, products)
+    dashboard/         Dashboard business rules and chart colours
+    demo.ts            Demo mode data and auth
+    format.ts          Number, money and hours formatting
+```
+
+Route groups such as `(auth)` and `(main-pages)` organise layouts and don't appear in URLs:
+`src/app/(main-pages)/dashboard` is served at `/dashboard`.
+
+## How things work
+
+### Global filters
+
+Every page reads the same filters from the top bar:
+
+- **Period:** Day, Month or Year, calendar periods only, at most one year per view. The period sets the data granularity: a day shows hourly data, a month daily data, a year monthly data. It's kept in the URL (`?view=month&date=2026-10`) so views can be bookmarked.
+- **Devices:** an optional device subset within the current branch. Selecting none means all devices.
+- **Branch:** switched from the sidebar.
+
+### Talking to the backend
+
+- The browser never calls `backend.wyreng.com` directly. All requests go to `/api/v1/…` on this app, and the route handlers forward them unchanged, trailing slashes included. That avoids CORS and keeps the backend URL in server configuration.
+- `src/lib/api/client.ts` is the single client. It attaches the bearer token and refreshes it once before it expires, however many requests are waiting. A 401 sends the user to `/login`.
+- For now the app uses the **existing endpoints as they are**. Changes the backend will need are tracked as proposals in the inventory.
+
+### Feature gating
+
+What a user can see comes from their token claims (`has_ems`, `has_solar`, `client_type`, `role_text`) plus a few hard-coded client names. All of it lives in `src/lib/gating.ts`, so it can move to backend permissions later in one place.
+
+### Theme
+
+Brand colours are defined in `src/app/globals.css`:
+
+- **Primary purple `#5C12A7`:** buttons, highlights, the Total energy card.
+- **Highlight yellow `#FCD642`:** used sparingly, for the logo accent, solar in charts and small touches.
+- **Neutrals:** carry a faint purple tint.
+- **Charts:** use purple shades `--chart-1`…`--chart-4`, with yellow (`--chart-5`) reserved for solar.
+
+Dark mode is in the user menu.
+
+## Adding a page
+
+1. Create `src/app/(main-pages)/<route>/page.tsx`. It gets the sidebar and filters automatically.
+2. Add typed endpoint calls in `src/lib/api/endpoints.ts`, with a demo version in `src/lib/demo.ts` if it should work in demo mode.
+3. Read the filters with `useFilters()` and the user with `useClaims()`.
+4. Set `ready: true` for its sidebar item in `src/components/app-sidebar.tsx`.
