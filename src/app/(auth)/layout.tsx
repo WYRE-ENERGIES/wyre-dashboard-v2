@@ -3,7 +3,11 @@ import { WyreLogo } from "@/components/wyre-logo"
 
 /** Shared frame for sign-in and password pages: brand panel on wide screens,
  * the form on the right (or alone on phones). */
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <div className="grid min-h-svh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <aside className="relative hidden overflow-hidden bg-primary p-10 text-primary-foreground lg:flex lg:flex-col">
@@ -24,7 +28,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <main className="flex flex-col items-center justify-center gap-8 p-6 sm:p-10">
         <WyreLogo className="h-9 text-primary lg:hidden" />
         <div className="w-full max-w-sm">{children}</div>
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Wyre. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Wyre. All rights reserved.
+        </p>
       </main>
     </div>
   )

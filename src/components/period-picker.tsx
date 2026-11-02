@@ -1,13 +1,27 @@
 "use client"
 
 import * as React from "react"
-import { addYears, format, isAfter, isSameMonth, setMonth, startOfMonth, startOfYear, subDays, subMonths } from "date-fns"
+import {
+  addYears,
+  format,
+  isAfter,
+  isSameMonth,
+  setMonth,
+  startOfMonth,
+  startOfYear,
+  subDays,
+  subMonths,
+} from "date-fns"
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
 import { useFilters } from "@/components/filters-provider"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
@@ -32,8 +46,15 @@ const KINDS: Array<{ kind: PeriodKind; label: string }> = [
  * contains it, otherwise the start of the current period. */
 function convert(period: Period, kind: PeriodKind): Period {
   const now = new Date()
-  const containsToday = !isAfter(periodStart(period), now) && !isAfter(now, periodEnd(period))
-  return { kind, anchor: periodStart({ kind, anchor: containsToday ? now : periodStart(period) }) }
+  const containsToday =
+    !isAfter(periodStart(period), now) && !isAfter(now, periodEnd(period))
+  return {
+    kind,
+    anchor: periodStart({
+      kind,
+      anchor: containsToday ? now : periodStart(period),
+    }),
+  }
 }
 
 export function PeriodPicker() {
@@ -50,8 +71,14 @@ export function PeriodPicker() {
   const shortcuts: Array<{ label: string; period: Period }> = [
     { label: "Today", period: { kind: "day", anchor: now } },
     { label: "Yesterday", period: { kind: "day", anchor: subDays(now, 1) } },
-    { label: "This month", period: { kind: "month", anchor: startOfMonth(now) } },
-    { label: "Last month", period: { kind: "month", anchor: startOfMonth(subMonths(now, 1)) } },
+    {
+      label: "This month",
+      period: { kind: "month", anchor: startOfMonth(now) },
+    },
+    {
+      label: "Last month",
+      period: { kind: "month", anchor: startOfMonth(subMonths(now, 1)) },
+    },
     { label: "This year", period: { kind: "year", anchor: startOfYear(now) } },
   ]
 
@@ -69,7 +96,11 @@ export function PeriodPicker() {
         aria-label="Period type"
       >
         {KINDS.map(({ kind, label }) => (
-          <ToggleGroupItem key={kind} value={kind} className="h-7 px-2 text-xs md:h-8 md:px-3 md:text-sm">
+          <ToggleGroupItem
+            key={kind}
+            value={kind}
+            className="h-7 px-2 text-xs md:h-8 md:px-3 md:text-sm"
+          >
             {label}
           </ToggleGroupItem>
         ))}
@@ -94,8 +125,12 @@ export function PeriodPicker() {
                 className="min-w-0 flex-1 justify-center px-2 font-normal md:min-w-44 md:flex-none md:justify-start md:px-3"
               >
                 <CalendarIcon className="hidden md:block" />
-                <span className="truncate md:hidden">{periodShortLabel(period)}</span>
-                <span className="hidden truncate md:inline">{periodLabel(period)}</span>
+                <span className="truncate md:hidden">
+                  {periodShortLabel(period)}
+                </span>
+                <span className="hidden truncate md:inline">
+                  {periodLabel(period)}
+                </span>
               </Button>
             }
           />
@@ -108,7 +143,12 @@ export function PeriodPicker() {
                     variant="ghost"
                     size="sm"
                     className="justify-start"
-                    onClick={() => choose({ kind: s.period.kind, anchor: periodStart(s.period) })}
+                    onClick={() =>
+                      choose({
+                        kind: s.period.kind,
+                        anchor: periodStart(s.period),
+                      })
+                    }
                   >
                     {s.label}
                   </Button>
@@ -120,12 +160,18 @@ export function PeriodPicker() {
                     mode="single"
                     selected={period.anchor}
                     defaultMonth={period.anchor}
-                    onSelect={(date) => date && choose({ kind: "day", anchor: date })}
+                    onSelect={(date) =>
+                      date && choose({ kind: "day", anchor: date })
+                    }
                     disabled={{ after: now }}
                   />
                 )}
-                {period.kind === "month" && <MonthGrid period={period} onSelect={choose} />}
-                {period.kind === "year" && <YearGrid period={period} onSelect={choose} />}
+                {period.kind === "month" && (
+                  <MonthGrid period={period} onSelect={choose} />
+                )}
+                {period.kind === "year" && (
+                  <YearGrid period={period} onSelect={choose} />
+                )}
               </div>
             </div>
           </PopoverContent>
@@ -145,13 +191,24 @@ export function PeriodPicker() {
   )
 }
 
-function MonthGrid({ period, onSelect }: { period: Period; onSelect: (p: Period) => void }) {
+function MonthGrid({
+  period,
+  onSelect,
+}: {
+  period: Period
+  onSelect: (p: Period) => void
+}) {
   const [year, setYear] = React.useState(period.anchor.getFullYear())
   const now = new Date()
   return (
     <div className="w-64 p-2">
       <div className="mb-2 flex items-center justify-between">
-        <Button variant="ghost" size="icon-sm" aria-label="Previous year" onClick={() => setYear(year - 1)}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Previous year"
+          onClick={() => setYear(year - 1)}
+        >
           <ChevronLeftIcon />
         </Button>
         <span className="text-sm font-medium">{year}</span>
@@ -186,7 +243,13 @@ function MonthGrid({ period, onSelect }: { period: Period; onSelect: (p: Period)
   )
 }
 
-function YearGrid({ period, onSelect }: { period: Period; onSelect: (p: Period) => void }) {
+function YearGrid({
+  period,
+  onSelect,
+}: {
+  period: Period
+  onSelect: (p: Period) => void
+}) {
   const thisYear = new Date().getFullYear()
   const years = Array.from({ length: 12 }, (_, i) => thisYear - 11 + i)
   return (
@@ -197,13 +260,22 @@ function YearGrid({ period, onSelect }: { period: Period; onSelect: (p: Period) 
           variant={year === period.anchor.getFullYear() ? "default" : "ghost"}
           size="sm"
           className={cn(year === thisYear && "font-semibold")}
-          onClick={() => onSelect({ kind: "year", anchor: startOfYear(addYears(new Date(thisYear, 0, 1), year - thisYear)) })}
+          onClick={() =>
+            onSelect({
+              kind: "year",
+              anchor: startOfYear(
+                addYears(new Date(thisYear, 0, 1), year - thisYear)
+              ),
+            })
+          }
         >
           {year}
         </Button>
       ))}
       <Separator className="col-span-3 my-1" />
-      <p className="col-span-3 px-1 text-xs text-muted-foreground">One year is the maximum per view.</p>
+      <p className="col-span-3 px-1 text-xs text-muted-foreground">
+        One year is the maximum per view.
+      </p>
     </div>
   )
 }

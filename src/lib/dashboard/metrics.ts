@@ -16,15 +16,27 @@ import { periodEnd, periodStart, type Period } from "@/lib/period"
 
 /** Keep only the devices ticked in the global device filter (none = all).
  * Old: helpers/v2/organizationDataHelpers.js `devicesArray`. */
-export function filterDevices<T extends DeviceBase>(devices: T[], selected: number[]) {
-  return selected.length ? devices.filter((d) => selected.includes(d.device_id)) : devices
+export function filterDevices<T extends DeviceBase>(
+  devices: T[],
+  selected: number[]
+) {
+  return selected.length
+    ? devices.filter((d) => selected.includes(d.device_id))
+    : devices
 }
 
-const isAggregatorySource = (d: DeviceBase) => d.is_source && d.source_tag === "AGGREGATORY"
+const isAggregatorySource = (d: DeviceBase) =>
+  d.is_source && d.source_tag === "AGGREGATORY"
 
 /** Total Energy card. Totals add up AGGREGATORY sources only (cards/TotalEnergy.js). */
-export function totalEnergy(data: TotalEnergyResponse | undefined, selected: number[]) {
-  const devices = filterDevices(data?.authenticatedData.branches[0]?.devices ?? [], selected)
+export function totalEnergy(
+  data: TotalEnergyResponse | undefined,
+  selected: number[]
+) {
+  const devices = filterDevices(
+    data?.authenticatedData.branches[0]?.devices ?? [],
+    selected
+  )
   const sources = devices.filter(isAggregatorySource)
   const sum = (pick: (d: (typeof devices)[number]) => number | null) =>
     sources.reduce((acc, d) => acc + (pick(d) ?? 0), 0)
@@ -34,9 +46,18 @@ export function totalEnergy(data: TotalEnergyResponse | undefined, selected: num
     solarHoursKwh: sum((d) => d.dashboard.solar_hours.value),
     // Carbon and today/yesterday add up *all* filtered devices
     // (cards/CarbonEmmission.js, cards/YesterdayAndToday.js).
-    carbonTons: devices.reduce((acc, d) => acc + (d.dashboard.dashboard_carbon_emissions.value ?? 0), 0),
-    todayKwh: devices.reduce((acc, d) => acc + (d.dashboard.today.value ?? 0), 0),
-    yesterdayKwh: devices.reduce((acc, d) => acc + (d.dashboard.yesterday.value ?? 0), 0),
+    carbonTons: devices.reduce(
+      (acc, d) => acc + (d.dashboard.dashboard_carbon_emissions.value ?? 0),
+      0
+    ),
+    todayKwh: devices.reduce(
+      (acc, d) => acc + (d.dashboard.today.value ?? 0),
+      0
+    ),
+    yesterdayKwh: devices.reduce(
+      (acc, d) => acc + (d.dashboard.yesterday.value ?? 0),
+      0
+    ),
   }
 }
 
@@ -51,7 +72,9 @@ export function demandSummary(
   selectedNames: string[] | null
 ) {
   const all = data?.data[0]?.devices_demands ?? []
-  const devices = selectedNames ? all.filter((d) => selectedNames.includes(d.device_name)) : all
+  const devices = selectedNames
+    ? all.filter((d) => selectedNames.includes(d.device_name))
+    : all
   const mins = devices.map((d) => d.min).filter((v) => v > 0)
   return {
     max: devices.length ? Math.max(...devices.map((d) => d.max)) : 0,
@@ -70,8 +93,14 @@ export type SourceUsage = {
 }
 
 /** Per-source cards and the usage-hours doughnut (DashBoardAmountUsed.js). */
-export function sourceUsage(data: DeviceUsageResponse | undefined, selected: number[]): SourceUsage[] {
-  return filterDevices(data?.authenticatedData.branches[0]?.devices ?? [], selected)
+export function sourceUsage(
+  data: DeviceUsageResponse | undefined,
+  selected: number[]
+): SourceUsage[] {
+  return filterDevices(
+    data?.authenticatedData.branches[0]?.devices ?? [],
+    selected
+  )
     .filter((d) => d.is_source)
     .map((d) => ({
       deviceId: d.device_id,
@@ -85,7 +114,9 @@ export function sourceUsage(data: DeviceUsageResponse | undefined, selected: num
 
 export type EnergySeries = {
   /** One entry per time bucket, keyed by device id. */
-  rows: Array<{ label: string; tooltipLabel: string } & Record<string, number | string>>
+  rows: Array<
+    { label: string; tooltipLabel: string } & Record<string, number | string>
+  >
   devices: Array<{ key: string; name: string; deviceType: string }>
 }
 
@@ -103,9 +134,10 @@ export function energySeries(
   selected: number[]
 ): EnergySeries {
   if (period.kind === "day") {
-    const sources = filterDevices(usage?.authenticatedData.branches[0]?.devices ?? [], selected).filter(
-      (d) => d.is_source
-    )
+    const sources = filterDevices(
+      usage?.authenticatedData.branches[0]?.devices ?? [],
+      selected
+    ).filter((d) => d.is_source)
     const rows = Array.from({ length: 24 }, (_, hour) => {
       const label = `${String(hour).padStart(2, "0")}:00`
       return { label, tooltipLabel: label } as EnergySeries["rows"][number]
@@ -116,14 +148,24 @@ export function energySeries(
       for (const row of rows) row[key(device)] = 0
       dates.forEach((iso, i) => {
         const hour = parseISO(iso).getHours()
-        rows[hour][key(device)] = (rows[hour][key(device)] as number) + (values[i] ?? 0)
+        rows[hour][key(device)] =
+          (rows[hour][key(device)] as number) + (values[i] ?? 0)
       })
     }
-    return { rows, devices: sources.map((d) => ({ key: key(d), name: d.name, deviceType: d.device_type })) }
+    return {
+      rows,
+      devices: sources.map((d) => ({
+        key: key(d),
+        name: d.name,
+        deviceType: d.device_type,
+      })),
+    }
   }
 
   const branch = daily?.authenticatedData.branches[0]
-  const sources = filterDevices(branch?.devices ?? [], selected).filter((d) => d.is_source)
+  const sources = filterDevices(branch?.devices ?? [], selected).filter(
+    (d) => d.is_source
+  )
   const start = format(periodStart(period), "yyyy-MM-dd")
   const end = format(periodEnd(period), "yyyy-MM-dd")
   // The endpoint returns one day past the end; keep only days inside the period.
@@ -137,10 +179,18 @@ export function energySeries(
         label: format(parseISO(date), "d"),
         tooltipLabel: format(parseISO(date), "EEE d MMM"),
       } as EnergySeries["rows"][number]
-      for (const device of sources) row[key(device)] = device.daily_kwh[index] ?? 0
+      for (const device of sources)
+        row[key(device)] = device.daily_kwh[index] ?? 0
       return row
     })
-    return { rows, devices: sources.map((d) => ({ key: key(d), name: d.name, deviceType: d.device_type })) }
+    return {
+      rows,
+      devices: sources.map((d) => ({
+        key: key(d),
+        name: d.name,
+        deviceType: d.device_type,
+      })),
+    }
   }
 
   const year = periodStart(period).getFullYear()
@@ -156,10 +206,18 @@ export function energySeries(
   for (const { date, index } of days) {
     const month = parseISO(date).getMonth()
     for (const device of sources) {
-      rows[month][key(device)] = (rows[month][key(device)] as number) + (device.daily_kwh[index] ?? 0)
+      rows[month][key(device)] =
+        (rows[month][key(device)] as number) + (device.daily_kwh[index] ?? 0)
     }
   }
-  return { rows, devices: sources.map((d) => ({ key: key(d), name: d.name, deviceType: d.device_type })) }
+  return {
+    rows,
+    devices: sources.map((d) => ({
+      key: key(d),
+      name: d.name,
+      deviceType: d.device_type,
+    })),
+  }
 }
 
 const key = (d: DeviceBase) => `d${d.device_id}`
@@ -168,11 +226,18 @@ const key = (d: DeviceBase) => `d${d.device_id}`
  * Load Overview block for BESPOKE clients (genericHelpers.js
  * `generateLoadOverviewChartData`): each load device's share of total load kWh.
  */
-export function loadShares(data: TotalEnergyResponse | undefined, selected: number[]) {
-  const loads = filterDevices(data?.authenticatedData.branches[0]?.devices ?? [], selected).filter(
-    (d) => d.is_load
+export function loadShares(
+  data: TotalEnergyResponse | undefined,
+  selected: number[]
+) {
+  const loads = filterDevices(
+    data?.authenticatedData.branches[0]?.devices ?? [],
+    selected
+  ).filter((d) => d.is_load)
+  const total = loads.reduce(
+    (acc, d) => acc + (d.dashboard.total_kwh.value ?? 0),
+    0
   )
-  const total = loads.reduce((acc, d) => acc + (d.dashboard.total_kwh.value ?? 0), 0)
   return loads.map((d) => ({
     name: d.name,
     kwh: d.dashboard.total_kwh.value ?? 0,

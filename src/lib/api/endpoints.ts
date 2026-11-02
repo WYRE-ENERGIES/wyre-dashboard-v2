@@ -28,7 +28,10 @@ export const login = (username: string, password: string) =>
 export const switchBranchToken = (branchId: number) =>
   DEMO
     ? demoApi.switchBranch(branchId)
-    : apiRequest<TokenResponse>(`force-login/${branchId}/`, { method: "POST", body: {} })
+    : apiRequest<TokenResponse>(`force-login/${branchId}/`, {
+        method: "POST",
+        body: {},
+      })
 
 /** Forgot password: emails a reset link (old app: authPages/ResetPassword.js). */
 export const requestPasswordReset = (email: string) =>
@@ -66,34 +69,74 @@ export const getPermittedBranches = () =>
 export const getSideBar = () =>
   DEMO ? demoApi.sideBar() : apiRequest<SideBarResponse>("side_bar_data")
 
-const ranged = (path: string, branchId: number, period: Period, withInterval = true) =>
+const ranged = (
+  path: string,
+  branchId: number,
+  period: Period,
+  withInterval = true
+) =>
   `${path}/${branchId}/${endpointRange(period)}${withInterval ? `/${GRANULARITY[period.kind]}` : ""}`
 
-export const getTotalEnergy = (branchId: number, period: Period, signal?: AbortSignal) =>
+export const getTotalEnergy = (
+  branchId: number,
+  period: Period,
+  signal?: AbortSignal
+) =>
   DEMO
     ? demoApi.totalEnergy(period)
-    : apiRequest<TotalEnergyResponse>(ranged("dashboard/total_energy", branchId, period), { signal })
+    : apiRequest<TotalEnergyResponse>(
+        ranged("dashboard/total_energy", branchId, period),
+        { signal }
+      )
 
-export const getDeviceUsage = (branchId: number, period: Period, signal?: AbortSignal) =>
+export const getDeviceUsage = (
+  branchId: number,
+  period: Period,
+  signal?: AbortSignal
+) =>
   DEMO
     ? demoApi.deviceUsage(period)
-    : apiRequest<DeviceUsageResponse>(ranged("dashboard/device_usage", branchId, period), { signal })
+    : apiRequest<DeviceUsageResponse>(
+        ranged("dashboard/device_usage", branchId, period),
+        { signal }
+      )
 
-export const getDailyConsumption = (branchId: number, period: Period, signal?: AbortSignal) =>
+export const getDailyConsumption = (
+  branchId: number,
+  period: Period,
+  signal?: AbortSignal
+) =>
   DEMO
     ? demoApi.dailyConsumption(period)
-    : apiRequest<DailyConsumptionResponse>(ranged("dashboard/daily_consumption", branchId, period), {
-        signal,
-      })
+    : apiRequest<DailyConsumptionResponse>(
+        ranged("dashboard/daily_consumption", branchId, period),
+        {
+          signal,
+        }
+      )
 
-export const getBranchDemand = (branchId: number, period: Period, signal?: AbortSignal) =>
+export const getBranchDemand = (
+  branchId: number,
+  period: Period,
+  signal?: AbortSignal
+) =>
   DEMO
     ? demoApi.branchDemand(period)
-    : apiRequest<BranchDemandResponse>(ranged("branch_demand", branchId, period, false), { signal })
+    : apiRequest<BranchDemandResponse>(
+        ranged("branch_demand", branchId, period, false),
+        { signal }
+      )
 
-export const getBlendedCost = (branchId: number, period: Period, signal?: AbortSignal) =>
+export const getBlendedCost = (
+  branchId: number,
+  period: Period,
+  signal?: AbortSignal
+) =>
   DEMO
     ? demoApi.blendedCost(period)
-    : apiRequest<BlendedCostResponse>(`${ranged("blended_cost", branchId, period, false)}/`, {
-        signal,
-      })
+    : apiRequest<BlendedCostResponse>(
+        `${ranged("blended_cost", branchId, period, false)}/`,
+        {
+          signal,
+        }
+      )

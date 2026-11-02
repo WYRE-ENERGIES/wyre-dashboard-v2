@@ -44,5 +44,12 @@ export function useDashboardData() {
     queryFn: ({ signal }) => getBlendedCost(branchId, period, signal),
   })
 
-  return { period, totalEnergy, deviceUsage, dailyConsumption, demand, blendedCost }
+  return {
+    period,
+    totalEnergy,
+    deviceUsage,
+    dailyConsumption,
+    demand,
+    blendedCost,
+  }
 }

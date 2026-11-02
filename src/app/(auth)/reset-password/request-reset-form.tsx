@@ -42,12 +42,19 @@ export function RequestResetForm() {
           title="Check your email"
           description={
             <>
-              If an account uses <span className="font-medium text-foreground">{sentTo}</span>, we&apos;ve
-              sent a link to reset its password. The link expires after a while, so use it soon.
+              If an account uses{" "}
+              <span className="font-medium text-foreground">{sentTo}</span>,
+              we&apos;ve sent a link to reset its password. The link expires
+              after a while, so use it soon.
             </>
           }
         />
-        <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/login" />}>
+        <Button
+          variant="outline"
+          className="w-full"
+          nativeButton={false}
+          render={<Link href="/login" />}
+        >
           <ArrowLeftIcon />
           Back to sign in
         </Button>
@@ -71,13 +78,25 @@ export function RequestResetForm() {
           )}
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input id="email" name="email" type="email" autoComplete="email" required autoFocus />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              autoFocus
+            />
           </Field>
           <Button type="submit" size="lg" disabled={pending} className="w-full">
             {pending && <Spinner />}
             {pending ? "Sending…" : "Send reset link"}
           </Button>
-          <Button variant="ghost" className="w-full" nativeButton={false} render={<Link href="/login" />}>
+          <Button
+            variant="ghost"
+            className="w-full"
+            nativeButton={false}
+            render={<Link href="/login" />}
+          >
             <ArrowLeftIcon />
             Back to sign in
           </Button>

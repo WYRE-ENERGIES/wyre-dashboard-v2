@@ -2,10 +2,17 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
-import { CardError, InfoHint } from "@/components/dashboard/card-parts"
+import { CardError, InfoHint } from "@/components/shared/card-parts"
 import type { useDashboardData } from "@/components/dashboard/use-dashboard-data"
 import { useFilters } from "@/components/filters-provider"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   ChartContainer,
   ChartLegend,
@@ -20,16 +27,29 @@ import { energySeries } from "@/lib/dashboard/metrics"
 import { formatDeviceName, formatNumber } from "@/lib/format"
 import { GRANULARITY, periodLabel } from "@/lib/period"
 
-const TITLES = { hourly: "Hourly energy", daily: "Daily energy", monthly: "Monthly energy" } as const
+const TITLES = {
+  hourly: "Hourly energy",
+  daily: "Daily energy",
+  monthly: "Monthly energy",
+} as const
 
 /** Stacked energy-by-source bars at the period's granularity. */
-export function EnergyChart({ data }: { data: ReturnType<typeof useDashboardData> }) {
+export function EnergyChart({
+  data,
+}: {
+  data: ReturnType<typeof useDashboardData>
+}) {
   const { period, selectedDeviceIds } = useFilters()
   const granularity = GRANULARITY[period.kind]
   // Day uses device_usage's hourly series; Month and Year use daily_consumption.
   const query = period.kind === "day" ? data.deviceUsage : data.dailyConsumption
 
-  const series = energySeries(period, data.deviceUsage.data, data.dailyConsumption.data, selectedDeviceIds)
+  const series = energySeries(
+    period,
+    data.deviceUsage.data,
+    data.dailyConsumption.data,
+    selectedDeviceIds
+  )
   const colors = seriesColors(series.devices)
   const config: ChartConfig = Object.fromEntries(
     series.devices.map((device, index) => [
@@ -45,8 +65,13 @@ export function EnergyChart({ data }: { data: ReturnType<typeof useDashboardData
         <CardDescription>{periodLabel(period)} · kWh</CardDescription>
         <CardAction>
           <InfoHint>
-            Energy consumed per {granularity === "hourly" ? "hour" : granularity === "daily" ? "day" : "month"},
-            split by the source that supplied it.
+            Energy consumed per{" "}
+            {granularity === "hourly"
+              ? "hour"
+              : granularity === "daily"
+                ? "day"
+                : "month"}
+            , split by the source that supplied it.
           </InfoHint>
         </CardAction>
       </CardHeader>
@@ -80,14 +105,19 @@ export function EnergyChart({ data }: { data: ReturnType<typeof useDashboardData
                 cursor={false}
                 content={
                   <ChartTooltipContent
-                    labelFormatter={(_, payload) => payload?.[0]?.payload?.tooltipLabel ?? ""}
+                    labelFormatter={(_, payload) =>
+                      payload?.[0]?.payload?.tooltipLabel ?? ""
+                    }
                     formatter={(value, name, item) => (
                       <div className="flex w-full items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <span className="size-2.5 rounded-[2px]" style={{ background: item.color }} />
+                          <span
+                            className="size-2.5 rounded-[2px]"
+                            style={{ background: item.color }}
+                          />
                           {config[String(name)]?.label ?? name}
                         </span>
-                        <span className="font-mono tabular-nums text-foreground">
+                        <span className="font-mono text-foreground tabular-nums">
                           {formatNumber(Number(value))} kWh
                         </span>
                       </div>
@@ -102,7 +132,9 @@ export function EnergyChart({ data }: { data: ReturnType<typeof useDashboardData
                   dataKey={device.key}
                   stackId="energy"
                   fill={`var(--color-${device.key})`}
-                  radius={index === series.devices.length - 1 ? [4, 4, 0, 0] : 0}
+                  radius={
+                    index === series.devices.length - 1 ? [4, 4, 0, 0] : 0
+                  }
                 />
               ))}
             </BarChart>

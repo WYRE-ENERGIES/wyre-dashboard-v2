@@ -67,7 +67,10 @@ export function FeatureCarousel() {
       onMouseLeave={() => setPaused(false)}
     >
       {/* Fixed height so the panel doesn't jump between slides. */}
-      <div className="min-h-56" aria-live={reducedMotion || paused ? "polite" : "off"}>
+      <div
+        className="min-h-56"
+        aria-live={reducedMotion || paused ? "polite" : "off"}
+      >
         <div
           key={index}
           role="group"
@@ -78,7 +81,9 @@ export function FeatureCarousel() {
           <span className="mb-5 flex size-11 items-center justify-center rounded-xl bg-highlight/20 text-highlight">
             <feature.icon className="size-5" />
           </span>
-          <p className="font-heading text-3xl leading-tight font-semibold">{feature.title}</p>
+          <p className="font-heading text-3xl leading-tight font-semibold">
+            {feature.title}
+          </p>
           <p className="mt-3 text-primary-foreground/75">{feature.body}</p>
         </div>
       </div>
@@ -95,9 +100,11 @@ export function FeatureCarousel() {
               aria-current={active ? "true" : undefined}
               className={cn(
                 "group relative h-1 overflow-hidden rounded-full transition-[width,background-color] duration-300 outline-none",
-                "before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']", // larger hit area
+                "before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']", // larger hit area
                 "focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-offset-4 focus-visible:ring-offset-primary",
-                active ? "w-16 bg-primary-foreground/25" : "w-6 bg-primary-foreground/25 hover:bg-primary-foreground/45"
+                active
+                  ? "w-16 bg-primary-foreground/25"
+                  : "w-6 bg-primary-foreground/25 hover:bg-primary-foreground/45"
               )}
             >
               {active && (

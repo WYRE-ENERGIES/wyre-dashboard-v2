@@ -4,7 +4,11 @@ import { InfoIcon, RotateCwIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 /** Stat cards (overview row, energy sources) get a mild secondary fill on top
@@ -13,7 +17,13 @@ import { cn } from "@/lib/utils"
 export const statCardClass = "bg-secondary dark:bg-card"
 
 /** The (i) hint the old dashboard showed on each card. */
-export function InfoHint({ children, className }: { children: React.ReactNode; className?: string }) {
+export function InfoHint({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <Tooltip>
       <TooltipTrigger
@@ -21,7 +31,10 @@ export function InfoHint({ children, className }: { children: React.ReactNode; c
           <button
             type="button"
             aria-label="About this card"
-            className={cn("text-muted-foreground hover:text-foreground", className)}
+            className={cn(
+              "text-muted-foreground hover:text-foreground",
+              className
+            )}
           />
         }
       >
@@ -32,9 +45,20 @@ export function InfoHint({ children, className }: { children: React.ReactNode; c
   )
 }
 
-export function CardError({ onRetry, className }: { onRetry: () => void; className?: string }) {
+export function CardError({
+  onRetry,
+  className,
+}: {
+  onRetry: () => void
+  className?: string
+}) {
   return (
-    <div className={cn("flex flex-col items-start gap-2 text-sm text-muted-foreground", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-start gap-2 text-sm text-muted-foreground",
+        className
+      )}
+    >
       <span>Couldn&apos;t load this data.</span>
       <Button variant="outline" size="xs" onClick={onRetry}>
         <RotateCwIcon />
@@ -59,9 +83,16 @@ export function Stat({
   className?: string
 }) {
   return (
-    <span className={cn("font-heading text-2xl font-semibold tabular-nums", className)}>
+    <span
+      className={cn(
+        "font-heading text-2xl font-semibold tabular-nums",
+        className
+      )}
+    >
       {value}
-      {unit && <span className="ml-1 text-sm font-normal opacity-70">{unit}</span>}
+      {unit && (
+        <span className="ml-1 text-sm font-normal opacity-70">{unit}</span>
+      )}
     </span>
   )
 }

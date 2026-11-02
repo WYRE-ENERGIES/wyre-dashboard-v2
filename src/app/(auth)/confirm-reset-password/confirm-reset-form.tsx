@@ -4,7 +4,13 @@ import * as React from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { CheckIcon, CircleAlertIcon, CircleCheckIcon, LinkIcon, XIcon } from "lucide-react"
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  CircleCheckIcon,
+  LinkIcon,
+  XIcon,
+} from "lucide-react"
 
 import { AuthHeading } from "@/components/auth/auth-heading"
 import { PasswordInput } from "@/components/auth/password-input"
@@ -57,10 +63,20 @@ export function ConfirmResetForm() {
               : "The reset link is missing or incorrect. Request a new one to continue."
           }
         />
-        <Button className="w-full" size="lg" nativeButton={false} render={<Link href="/reset-password" />}>
+        <Button
+          className="w-full"
+          size="lg"
+          nativeButton={false}
+          render={<Link href="/reset-password" />}
+        >
           Request a new link
         </Button>
-        <Button variant="ghost" className="w-full" nativeButton={false} render={<Link href="/login" />}>
+        <Button
+          variant="ghost"
+          className="w-full"
+          nativeButton={false}
+          render={<Link href="/login" />}
+        >
           Back to sign in
         </Button>
       </div>
@@ -82,7 +98,10 @@ function NewPasswordForm({ token }: { token: string }) {
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!allRulesPass) return setError("Your new password doesn't meet all the requirements yet.")
+    if (!allRulesPass)
+      return setError(
+        "Your new password doesn't meet all the requirements yet."
+      )
     if (!matches) return setError("The two passwords don't match.")
     setError(null)
     setPending(true)
@@ -90,7 +109,9 @@ function NewPasswordForm({ token }: { token: string }) {
       await confirmPasswordReset(token, password)
       setDone(true)
     } catch {
-      setError("We couldn't reset your password. The link may have expired — request a new one.")
+      setError(
+        "We couldn't reset your password. The link may have expired — request a new one."
+      )
     } finally {
       setPending(false)
     }
@@ -102,8 +123,16 @@ function NewPasswordForm({ token }: { token: string }) {
         <span className="flex size-12 items-center justify-center rounded-2xl bg-highlight/25 text-highlight-foreground dark:text-highlight">
           <CircleCheckIcon className="size-6" />
         </span>
-        <AuthHeading title="Password updated" description="You can now sign in with your new password." />
-        <Button className="w-full" size="lg" nativeButton={false} render={<Link href="/login" />}>
+        <AuthHeading
+          title="Password updated"
+          description="You can now sign in with your new password."
+        />
+        <Button
+          className="w-full"
+          size="lg"
+          nativeButton={false}
+          render={<Link href="/login" />}
+        >
           Go to sign in
         </Button>
       </div>
@@ -112,7 +141,10 @@ function NewPasswordForm({ token }: { token: string }) {
 
   return (
     <>
-      <AuthHeading title="Set a new password" description="Choose a strong password you don't use elsewhere." />
+      <AuthHeading
+        title="Set a new password"
+        description="Choose a strong password you don't use elsewhere."
+      />
       <form onSubmit={onSubmit} noValidate>
         <FieldGroup>
           {error && (
@@ -131,13 +163,19 @@ function NewPasswordForm({ token }: { token: string }) {
               required
               autoFocus
             />
-            <ul className="mt-1 grid gap-1 text-xs" aria-label="Password requirements">
+            <ul
+              className="mt-1 grid gap-1 text-xs"
+              aria-label="Password requirements"
+            >
               {RULES.map((rule) => {
                 const ok = rule.test(password)
                 return (
                   <li
                     key={rule.label}
-                    className={cn("flex items-center gap-1.5", ok ? "text-foreground" : "text-muted-foreground")}
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      ok ? "text-foreground" : "text-muted-foreground"
+                    )}
                   >
                     {ok ? (
                       <CheckIcon className="size-3.5 text-primary dark:text-highlight" />
@@ -151,7 +189,9 @@ function NewPasswordForm({ token }: { token: string }) {
             </ul>
           </Field>
           <Field>
-            <FieldLabel htmlFor="confirm-password">Confirm new password</FieldLabel>
+            <FieldLabel htmlFor="confirm-password">
+              Confirm new password
+            </FieldLabel>
             <PasswordInput
               id="confirm-password"
               autoComplete="new-password"
@@ -161,7 +201,9 @@ function NewPasswordForm({ token }: { token: string }) {
               required
             />
             {confirm.length > 0 && !matches && (
-              <p className="text-xs text-destructive">The passwords don&apos;t match.</p>
+              <p className="text-xs text-destructive">
+                The passwords don&apos;t match.
+              </p>
             )}
           </Field>
           <Button type="submit" size="lg" disabled={pending} className="w-full">

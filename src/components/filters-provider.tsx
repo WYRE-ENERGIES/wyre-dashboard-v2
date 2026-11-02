@@ -4,7 +4,12 @@ import * as React from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 
 import { useClaims } from "@/components/session-provider"
-import { defaultPeriod, parsePeriod, serializePeriod, type Period } from "@/lib/period"
+import {
+  defaultPeriod,
+  parsePeriod,
+  serializePeriod,
+  type Period,
+} from "@/lib/period"
 
 type FiltersContextValue = {
   period: Period
@@ -28,7 +33,10 @@ export function FiltersProvider({ children }: { children: React.ReactNode }) {
 
   const view = searchParams.get("view")
   const date = searchParams.get("date")
-  const period = React.useMemo(() => parsePeriod(view, date) ?? defaultPeriod(), [view, date])
+  const period = React.useMemo(
+    () => parsePeriod(view, date) ?? defaultPeriod(),
+    [view, date]
+  )
 
   const setPeriod = React.useCallback(
     (next: Period) => {
@@ -43,7 +51,10 @@ export function FiltersProvider({ children }: { children: React.ReactNode }) {
     [pathname, searchParams]
   )
 
-  const [selection, setSelection] = React.useState<{ branchId: number; ids: number[] }>({
+  const [selection, setSelection] = React.useState<{
+    branchId: number
+    ids: number[]
+  }>({
     branchId,
     ids: [],
   })
@@ -60,11 +71,14 @@ export function FiltersProvider({ children }: { children: React.ReactNode }) {
     () => ({ period, setPeriod, selectedDeviceIds, setSelectedDeviceIds }),
     [period, setPeriod, selectedDeviceIds, setSelectedDeviceIds]
   )
-  return <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
+  return (
+    <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
+  )
 }
 
 export function useFilters() {
   const context = React.useContext(FiltersContext)
-  if (!context) throw new Error("useFilters must be used within <FiltersProvider>")
+  if (!context)
+    throw new Error("useFilters must be used within <FiltersProvider>")
   return context
 }

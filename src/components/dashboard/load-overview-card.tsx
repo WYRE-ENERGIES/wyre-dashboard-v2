@@ -2,14 +2,26 @@
 
 import type { useDashboardData } from "@/components/dashboard/use-dashboard-data"
 import { useFilters } from "@/components/filters-provider"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { loadShares } from "@/lib/dashboard/metrics"
 import { formatDeviceName, formatNumber } from "@/lib/format"
 
 /** BESPOKE-only block: each load's share of total load energy. */
-export function LoadOverviewCard({ data }: { data: ReturnType<typeof useDashboardData> }) {
+export function LoadOverviewCard({
+  data,
+}: {
+  data: ReturnType<typeof useDashboardData>
+}) {
   const { selectedDeviceIds } = useFilters()
-  const loads = loadShares(data.totalEnergy.data, selectedDeviceIds).sort((a, b) => b.percent - a.percent)
+  const loads = loadShares(data.totalEnergy.data, selectedDeviceIds).sort(
+    (a, b) => b.percent - a.percent
+  )
   if (!loads.length) return null
 
   return (
@@ -28,7 +40,10 @@ export function LoadOverviewCard({ data }: { data: ReturnType<typeof useDashboar
               </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${load.percent}%` }} />
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${load.percent}%` }}
+              />
             </div>
           </div>
         ))}

@@ -59,8 +59,15 @@ export function periodEnd(period: Period, now = new Date()) {
 
 export function shiftPeriod(period: Period, step: 1 | -1): Period {
   const shift =
-    period.kind === "day" ? addDays : period.kind === "month" ? addMonths : addYears
-  return { kind: period.kind, anchor: periodStart({ ...period, anchor: shift(period.anchor, step) }) }
+    period.kind === "day"
+      ? addDays
+      : period.kind === "month"
+        ? addMonths
+        : addYears
+  return {
+    kind: period.kind,
+    anchor: periodStart({ ...period, anchor: shift(period.anchor, step) }),
+  }
 }
 
 export function isFuturePeriod(period: Period, now = new Date()) {
@@ -73,6 +80,16 @@ export function periodLabel({ kind, anchor }: Period) {
   return format(anchor, "yyyy")
 }
 
+/** Calendar month (1–12) and year of the period's start — for endpoints that
+ * take `?month=&year=` (Diesel, Solar, Report). */
+export function periodMonthYear(period: Period) {
+  const start = periodStart(period)
+  return { month: start.getMonth() + 1, year: start.getFullYear() }
+}
+
+/** `yyyy-MM-dd`, for endpoints and forms that take ISO dates. */
+export const isoDate = (date: Date) => format(date, "yyyy-MM-dd")
+
 /** Compact label for narrow screens: "30 Oct 2026", "Oct 2026", "2026". */
 export function periodShortLabel({ kind, anchor }: Period) {
   if (kind === "day") return format(anchor, "d MMM yyyy")
@@ -84,11 +101,16 @@ export function serializePeriod({ kind, anchor }: Period) {
   return { view: kind, date: format(anchor, URL_FORMAT[kind]) }
 }
 
-export function parsePeriod(view: string | null, date: string | null): Period | null {
+export function parsePeriod(
+  view: string | null,
+  date: string | null
+): Period | null {
   if (view !== "day" && view !== "month" && view !== "year") return null
   if (!date) return null
   const anchor = parse(date, URL_FORMAT[view], new Date())
-  return isValid(anchor) ? { kind: view, anchor: periodStart({ kind: view, anchor }) } : null
+  return isValid(anchor)
+    ? { kind: view, anchor: periodStart({ kind: view, anchor }) }
+    : null
 }
 
 /**

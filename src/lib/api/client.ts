@@ -22,6 +22,10 @@ type RequestOptions = {
   /** Skip the bearer header and refresh logic (login, password reset…). */
   anonymous?: boolean
   signal?: AbortSignal
+  /** "blob" for file downloads (PDFs); the default parses JSON. */
+  responseType?: "json" | "blob"
+  /** Accept header, e.g. "application/pdf" for downloads. */
+  accept?: string
 }
 
 let refreshInFlight: Promise<SessionTokens | null> | null = null
@@ -68,9 +72,16 @@ function expireSession() {
  */
 export async function apiRequest<T>(
   path: string,
-  { method = "GET", body, anonymous = false, signal }: RequestOptions = {}
+  {
+    method = "GET",
+    body,
+    anonymous = false,
+    signal,
+    responseType = "json",
+    accept = "application/json",
+  }: RequestOptions = {}
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json" }
+  const headers: Record<string, string> = { Accept: accept }
   if (body !== undefined) headers["Content-Type"] = "application/json"
 
   if (!anonymous) {
@@ -95,6 +106,17 @@ export async function apiRequest<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   })
+
+  if (responseType === "blob") {
+    if (response.status === 401 && !anonymous) expireSession()
+    if (!response.ok)
+      throw new ApiError(
+        `Request failed (${response.status})`,
+        response.status,
+        null
+      )
+    return (await response.blob()) as T
+  }
 
   const text = await response.text()
   let data: unknown = null

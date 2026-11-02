@@ -6,7 +6,10 @@ import { Providers } from "@/app/providers"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
-const notoSansHeading = Noto_Sans({ subsets: ["latin"], variable: "--font-heading" })
+const notoSansHeading = Noto_Sans({
+  subsets: ["latin"],
+  variable: "--font-heading",
+})
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 

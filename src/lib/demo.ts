@@ -12,7 +12,11 @@ import type {
   TotalEnergyResponse,
 } from "@/lib/api/types"
 import { ApiError } from "@/lib/api/client"
-import { readTokens, type SessionTokens, type UserClaims } from "@/lib/auth/session"
+import {
+  readTokens,
+  type SessionTokens,
+  type UserClaims,
+} from "@/lib/auth/session"
 import { periodEnd, periodStart, type Period } from "@/lib/period"
 
 /**
@@ -48,29 +52,83 @@ export const DEMO_BRANCHES = [
 // Demo sessions use tokens like "demo-branch-2" instead of real JWTs.
 const DEMO_TOKEN_PREFIX = "demo-branch-"
 
-export function demoClaimsFor(access: string | null | undefined): UserClaims | null {
+export function demoClaimsFor(
+  access: string | null | undefined
+): UserClaims | null {
   if (!access?.startsWith(DEMO_TOKEN_PREFIX)) return null
   const branchId = Number(access.slice(DEMO_TOKEN_PREFIX.length)) || 1
-  return { ...demoClaims, branch_id: branchId }
+  // Lekki (branch 1) is the demo solar site; the others are EMS-only.
+  return { ...demoClaims, branch_id: branchId, has_solar: branchId === 1 }
 }
 
 const demoTokens = (branchId: number): TokenResponse => ({
-  data: { token: { access: `${DEMO_TOKEN_PREFIX}${branchId}`, refresh: "demo" } satisfies SessionTokens },
+  data: {
+    token: {
+      access: `${DEMO_TOKEN_PREFIX}${branchId}`,
+      refresh: "demo",
+    } satisfies SessionTokens,
+  },
 })
 
-function currentBranch() {
+export function currentBranch() {
   const id = demoClaimsFor(readTokens()?.access)?.branch_id ?? 1
   return DEMO_BRANCHES.find((b) => b.id === id) ?? DEMO_BRANCHES[0]
 }
 
-const DEVICES: Array<DeviceBase & { kw: number; dayShare: number; nightShare: number }> = [
-  { id: 1, device_id: 101, name: "UTILITY", device_type: "UTILITY", is_source: true, is_load: false, source_tag: "AGGREGATORY", kw: 38, dayShare: 0.55, nightShare: 0.7 },
-  { id: 2, device_id: 102, name: "GEN_275kVA", device_type: "GENERATOR", is_source: true, is_load: false, source_tag: "AGGREGATORY", kw: 62, dayShare: 0.35, nightShare: 0.1 },
-  { id: 3, device_id: 103, name: "GEN_65kVA", device_type: "GENERATOR", is_source: true, is_load: false, source_tag: "AGGREGATORY", kw: 24, dayShare: 0.1, nightShare: 0.2 },
-  { id: 4, device_id: 104, name: "Solar_Inverter", device_type: "SOLAR", is_source: true, is_load: false, source_tag: "AGGREGATORY", kw: 30, dayShare: 0.25, nightShare: 0 },
+export const DEVICES: Array<
+  DeviceBase & { kw: number; dayShare: number; nightShare: number }
+> = [
+  {
+    id: 1,
+    device_id: 101,
+    name: "UTILITY",
+    device_type: "UTILITY",
+    is_source: true,
+    is_load: false,
+    source_tag: "AGGREGATORY",
+    kw: 38,
+    dayShare: 0.55,
+    nightShare: 0.7,
+  },
+  {
+    id: 2,
+    device_id: 102,
+    name: "GEN_275kVA",
+    device_type: "GENERATOR",
+    is_source: true,
+    is_load: false,
+    source_tag: "AGGREGATORY",
+    kw: 62,
+    dayShare: 0.35,
+    nightShare: 0.1,
+  },
+  {
+    id: 3,
+    device_id: 103,
+    name: "GEN_65kVA",
+    device_type: "GENERATOR",
+    is_source: true,
+    is_load: false,
+    source_tag: "AGGREGATORY",
+    kw: 24,
+    dayShare: 0.1,
+    nightShare: 0.2,
+  },
+  {
+    id: 4,
+    device_id: 104,
+    name: "Solar_Inverter",
+    device_type: "SOLAR",
+    is_source: true,
+    is_load: false,
+    source_tag: "AGGREGATORY",
+    kw: 30,
+    dayShare: 0.25,
+    nightShare: 0,
+  },
 ]
 
-const base = (d: (typeof DEVICES)[number]): DeviceBase => ({
+export const base = (d: (typeof DEVICES)[number]): DeviceBase => ({
   id: d.id,
   device_id: d.device_id,
   name: d.name,
@@ -81,30 +139,46 @@ const base = (d: (typeof DEVICES)[number]): DeviceBase => ({
 })
 
 /** Deterministic noise so the same period always shows the same numbers. */
-function noise(seed: number) {
+export function noise(seed: number) {
   const x = Math.sin(seed * 12.9898) * 43758.5453
   return x - Math.floor(x)
 }
 
-const dayKey = (d: Date) => Number(format(d, "yyyyMMdd"))
+export const dayKey = (d: Date) => Number(format(d, "yyyyMMdd"))
 
 /** kWh a device supplied in a given hour. */
-function hourlyKwh(device: (typeof DEVICES)[number], date: Date, hour: number) {
+export function hourlyKwh(
+  device: (typeof DEVICES)[number],
+  date: Date,
+  hour: number
+) {
   const daytime = hour >= 8 && hour < 18
   const weekend = [0, 6].includes(date.getDay())
   const share = daytime ? device.dayShare : device.nightShare
   const load = (daytime ? 1 : 0.45) * (weekend ? 0.6 : 1)
   const n = noise(dayKey(date) * 31 + hour * 7 + device.device_id)
   // Generators cut in when the grid drops: random outages zero some hours.
-  const on = device.device_type === "UTILITY" ? n > 0.25 : device.device_type === "GENERATOR" ? n > 0.55 : daytime
-  return on ? Math.round(device.kw * currentBranch().scale * share * load * (0.7 + n * 0.6) * 10) / 10 : 0
+  const on =
+    device.device_type === "UTILITY"
+      ? n > 0.25
+      : device.device_type === "GENERATOR"
+        ? n > 0.55
+        : daytime
+  return on
+    ? Math.round(
+        device.kw * currentBranch().scale * share * load * (0.7 + n * 0.6) * 10
+      ) / 10
+    : 0
 }
 
-function daysOf(period: Period) {
-  return eachDayOfInterval({ start: periodStart(period), end: periodEnd(period) })
+export function daysOf(period: Period) {
+  return eachDayOfInterval({
+    start: periodStart(period),
+    end: periodEnd(period),
+  })
 }
 
-function totals(period: Period) {
+export function totals(period: Period) {
   const end = periodEnd(period)
   return DEVICES.map((device) => {
     let kwh = 0
@@ -123,7 +197,7 @@ function totals(period: Period) {
   })
 }
 
-const envelope = <T,>(devices: T[], extra: object = {}) => ({
+export const envelope = <T>(devices: T[], extra: object = {}) => ({
   status: true,
   message: "Successful",
   authenticatedData: {
@@ -131,18 +205,30 @@ const envelope = <T,>(devices: T[], extra: object = {}) => ({
     user_id: 1,
     branch_id: 1,
     name: demoClaims.client,
-    branches: [{ id: 1, name: currentBranch().name, branch_id: currentBranch().id, devices, ...extra }],
+    branches: [
+      {
+        id: 1,
+        name: currentBranch().name,
+        branch_id: currentBranch().id,
+        devices,
+        ...extra,
+      },
+    ],
   },
 })
 
-const wait = <T,>(value: T) =>
-  new Promise<T>((resolve) => setTimeout(() => resolve(value), 300 + Math.random() * 700))
+export const wait = <T>(value: T) =>
+  new Promise<T>((resolve) =>
+    setTimeout(() => resolve(value), 300 + Math.random() * 700)
+  )
 
 export const demoApi = {
   sideBar: () => wait(envelope(DEVICES.map(base)) as SideBarResponse),
 
   permittedBranches: () =>
-    wait<PermittedBranchesResponse>({ branches: DEMO_BRANCHES.map(({ id, name }) => ({ id, name })) }),
+    wait<PermittedBranchesResponse>({
+      branches: DEMO_BRANCHES.map(({ id, name }) => ({ id, name })),
+    }),
 
   /** Any username works; the password "wrong" shows the error state. */
   login: async (_username: string, password: string) => {
@@ -156,13 +242,19 @@ export const demoApi = {
   switchBranch: (branchId: number) => wait(demoTokens(branchId)),
 
   /** Always "sends" the email, like the real endpoint does for unknown addresses. */
-  requestPasswordReset: (_email: string) => wait({ message: "Password reset email sent." }),
+  requestPasswordReset: (_email: string) =>
+    wait({ message: "Password reset email sent." }),
 
   /** Tokens "expired" and "invalid" show those states; anything else is valid. */
   validateResetToken: (token: string) =>
     wait({
       valid: !["expired", "invalid"].includes(token),
-      reason: token === "expired" ? "expired" : token === "invalid" ? "invalid" : null,
+      reason:
+        token === "expired"
+          ? "expired"
+          : token === "invalid"
+            ? "invalid"
+            : null,
     }),
 
   confirmPasswordReset: (_token: string, _password: string) =>
@@ -170,16 +262,32 @@ export const demoApi = {
 
   totalEnergy: (period: Period) => {
     const now = new Date()
-    const today = DEVICES.map((d) => Array.from({ length: getHours(now) }, (_, h) => hourlyKwh(d, now, h)).reduce((a, b) => a + b, 0))
+    const today = DEVICES.map((d) =>
+      Array.from({ length: getHours(now) }, (_, h) =>
+        hourlyKwh(d, now, h)
+      ).reduce((a, b) => a + b, 0)
+    )
     const yesterdayDate = new Date(now.getTime() - 86_400_000)
-    const yesterday = DEVICES.map((d) => Array.from({ length: 24 }, (_, h) => hourlyKwh(d, yesterdayDate, h)).reduce((a, b) => a + b, 0))
+    const yesterday = DEVICES.map((d) =>
+      Array.from({ length: 24 }, (_, h) =>
+        hourlyKwh(d, yesterdayDate, h)
+      ).reduce((a, b) => a + b, 0)
+    )
     return wait(
       envelope(
         totals(period).map(({ device, kwh, solarHoursKwh }, i) => ({
           ...base(device),
           dashboard: {
             total_kwh: { unit: "kWh", value: kwh },
-            dashboard_carbon_emissions: { unit: "Tons", value: device.device_type === "GENERATOR" ? kwh * 0.00071 : device.device_type === "UTILITY" ? kwh * 0.00043 : 0 },
+            dashboard_carbon_emissions: {
+              unit: "Tons",
+              value:
+                device.device_type === "GENERATOR"
+                  ? kwh * 0.00071
+                  : device.device_type === "UTILITY"
+                    ? kwh * 0.00043
+                    : 0,
+            },
             cost_of_energy: { unit: "Naira/kWh", value: null },
             today: { unit: "kWh", value: today[i] },
             yesterday: { unit: "kWh", value: yesterday[i] },
@@ -197,13 +305,20 @@ export const demoApi = {
         totals(period).map(({ device, kwh, hours }) => {
           const dates =
             period.kind === "day"
-              ? Array.from({ length: 24 }, (_, h) => format(new Date(days[0].getTime() + h * 3_600_000), "yyyy-MM-dd'T'HH:00:00"))
+              ? Array.from({ length: 24 }, (_, h) =>
+                  format(
+                    new Date(days[0].getTime() + h * 3_600_000),
+                    "yyyy-MM-dd'T'HH:00:00"
+                  )
+                )
               : []
           const end = periodEnd(period).getTime()
           const values =
             period.kind === "day"
               ? Array.from({ length: 24 }, (_, h) =>
-                  days[0].getTime() + h * 3_600_000 > end ? 0 : hourlyKwh(device, days[0], h)
+                  days[0].getTime() + h * 3_600_000 > end
+                    ? 0
+                    : hourlyKwh(device, days[0], h)
                 )
               : []
           return {
@@ -218,7 +333,10 @@ export const demoApi = {
             },
             billing_totals: {
               previous_total: { usage_kwh: 0, value_naira: 0 },
-              present_total: { usage_kwh: kwh, value_naira: device.device_type === "UTILITY" ? kwh * 209 : 0 },
+              present_total: {
+                usage_kwh: kwh,
+                value_naira: device.device_type === "UTILITY" ? kwh * 209 : 0,
+              },
             },
           }
         })
@@ -232,8 +350,13 @@ export const demoApi = {
       envelope(
         DEVICES.map((device) => ({
           ...base(device),
-          daily_kwh: days.map((day) =>
-            Math.round(Array.from({ length: 24 }, (_, h) => hourlyKwh(device, day, h)).reduce((a, b) => a + b, 0) * 10) / 10
+          daily_kwh: days.map(
+            (day) =>
+              Math.round(
+                Array.from({ length: 24 }, (_, h) =>
+                  hourlyKwh(device, day, h)
+                ).reduce((a, b) => a + b, 0) * 10
+              ) / 10
           ),
         })),
         { dates: days.map((d) => format(d, "yyyy-MM-dd")) }
@@ -253,7 +376,10 @@ export const demoApi = {
           unit: "KVA",
           papr: 0.62,
           devices_demands: DEVICES.map((d) => {
-            const max = d.kw * currentBranch().scale * (1.1 + noise(seed + d.device_id) * 0.3)
+            const max =
+              d.kw *
+              currentBranch().scale *
+              (1.1 + noise(seed + d.device_id) * 0.3)
             return {
               device_name: d.name,
               unit: "kVA",

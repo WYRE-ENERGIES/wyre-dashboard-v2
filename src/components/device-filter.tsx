@@ -29,11 +29,16 @@ export function DeviceFilter() {
     selectedDeviceIds.length === 0
       ? "All devices"
       : selectedDeviceIds.length === 1
-        ? formatDeviceName(devices.find((d) => d.device_id === selectedDeviceIds[0])?.name ?? "1 device")
+        ? formatDeviceName(
+            devices.find((d) => d.device_id === selectedDeviceIds[0])?.name ??
+              "1 device"
+          )
         : `${selectedDeviceIds.length} devices`
 
   const toggle = (id: number, checked: boolean) => {
-    const next = checked ? [...selectedDeviceIds, id] : selectedDeviceIds.filter((x) => x !== id)
+    const next = checked
+      ? [...selectedDeviceIds, id]
+      : selectedDeviceIds.filter((x) => x !== id)
     // Ticking every device is the same as "all".
     setSelectedDeviceIds(next.length === devices.length ? [] : next)
   }
@@ -52,7 +57,9 @@ export function DeviceFilter() {
       <DropdownMenuContent align="end" className="min-w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Devices</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setSelectedDeviceIds([])}>All devices</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSelectedDeviceIds([])}>
+            All devices
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
@@ -60,7 +67,9 @@ export function DeviceFilter() {
             <DropdownMenuCheckboxItem
               key={device.device_id}
               checked={selectedDeviceIds.includes(device.device_id)}
-              onCheckedChange={(checked: boolean) => toggle(device.device_id, checked)}
+              onCheckedChange={(checked: boolean) =>
+                toggle(device.device_id, checked)
+              }
               closeOnClick={false}
             >
               {formatDeviceName(device.name)}

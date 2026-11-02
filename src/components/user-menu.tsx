@@ -1,7 +1,14 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { ChevronsUpDownIcon, LogOutIcon, MoonIcon, SunIcon } from "lucide-react"
+import {
+  ChevronsUpDownIcon,
+  KeyRoundIcon,
+  LogOutIcon,
+  MoonIcon,
+  SunIcon,
+  UserIcon,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { RAIL_BUTTON } from "@/components/app-sidebar-styles"
@@ -16,7 +23,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
 export function UserMenu() {
@@ -25,7 +36,9 @@ export function UserMenu() {
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
 
-  const name = [claims.first_name, claims.last_name].filter(Boolean).join(" ") || claims.username
+  const name =
+    [claims.first_name, claims.last_name].filter(Boolean).join(" ") ||
+    claims.username
   const initials = name
     .split(/\s+/)
     .map((part) => part[0])
@@ -39,9 +52,14 @@ export function UserMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarMenuButton size="lg" className={cn("data-popup-open:bg-sidebar-accent", RAIL_BUTTON)}>
+              <SidebarMenuButton
+                size="lg"
+                className={cn("data-popup-open:bg-sidebar-accent", RAIL_BUTTON)}
+              >
                 <Avatar className="size-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{name}</span>
@@ -57,11 +75,28 @@ export function UserMenu() {
             <DropdownMenuGroup>
               <DropdownMenuLabel className="grid gap-0.5">
                 <span className="text-foreground">{name}</span>
-                {claims.email && <span className="font-normal">{claims.email}</span>}
+                {claims.email && (
+                  <span className="font-normal">{claims.email}</span>
+                )}
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => router.push("/personal-data")}>
+                <UserIcon />
+                Personal data
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/password")}>
+                <KeyRoundIcon />
+                Change password
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() =>
+                setTheme(resolvedTheme === "dark" ? "light" : "dark")
+              }
+            >
               {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
               {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
             </DropdownMenuItem>

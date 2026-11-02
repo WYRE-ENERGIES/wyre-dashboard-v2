@@ -15,7 +15,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 import { Spinner } from "@/components/ui/spinner"
 import { getPermittedBranches, getSideBar } from "@/lib/api/endpoints"
 import { cn } from "@/lib/utils"
@@ -28,13 +32,18 @@ export function BranchSwitcher() {
   const [switching, setSwitching] = React.useState(false)
 
   const sideBar = useQuery({ queryKey: ["side-bar"], queryFn: getSideBar })
-  const permitted = useQuery({ queryKey: ["permitted-branches"], queryFn: getPermittedBranches })
+  const permitted = useQuery({
+    queryKey: ["permitted-branches"],
+    queryFn: getPermittedBranches,
+  })
 
   const currentName =
     sideBar.data?.authenticatedData.branches[0]?.name ??
     permitted.data?.branches.find((b) => b.id === claims.branch_id)?.name ??
     "Loading branch…"
-  const branches = [...(permitted.data?.branches ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+  const branches = [...(permitted.data?.branches ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  )
   const canSwitch = branches.length > 1
 
   async function onSelect(branchId: number, name: string) {
@@ -61,7 +70,9 @@ export function BranchSwitcher() {
       </div>
       <div className="grid flex-1 text-left text-sm leading-tight">
         <span className="truncate font-medium">{currentName}</span>
-        <span className="truncate text-xs text-muted-foreground">{claims.client}</span>
+        <span className="truncate text-xs text-muted-foreground">
+          {claims.client}
+        </span>
       </div>
       {canSwitch && <ChevronsUpDownIcon className="ml-auto" />}
     </SidebarMenuButton>
@@ -82,7 +93,9 @@ export function BranchSwitcher() {
                     onClick={() => onSelect(branch.id, branch.name)}
                   >
                     <span className="truncate">{branch.name}</span>
-                    {branch.id === claims.branch_id && <CheckIcon className="ml-auto" />}
+                    {branch.id === claims.branch_id && (
+                      <CheckIcon className="ml-auto" />
+                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuGroup>

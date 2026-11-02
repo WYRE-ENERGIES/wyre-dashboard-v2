@@ -97,10 +97,18 @@ export type BranchDemandResponse = {
 }
 
 /** GET blended_cost/{branch}/{start}/{end}/ */
-export type BlendedCostResponse = { status: boolean; message: string; data: number | null }
+export type BlendedCostResponse = {
+  status: boolean
+  message: string
+  data: number | null
+}
 
 /** GET accounts/user/permitted-branches/ */
-export type PermittedBranchesResponse = { branches: Array<{ id: number; name: string }> }
+export type PermittedBranchesResponse = {
+  branches: Array<{ id: number; name: string }>
+}
 
 /** POST auth/ and POST force-login/{branchId}/ */
-export type TokenResponse = { data: { token: { access: string; refresh: string } } }
+export type TokenResponse = {
+  data: { token: { access: string; refresh: string } }
+}

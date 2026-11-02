@@ -1,0 +1,92 @@
+import { isAfter, subDays } from "date-fns"
+
+import type { ReportRequest, ReportType } from "@/lib/api/report-types"
+import {
+  isoDate,
+  periodEnd,
+  periodMonthYear,
+  periodStart,
+  type Period,
+  type PeriodKind,
+} from "@/lib/period"
+
+/**
+ * Inventory §8 ("Report fits the same picker"): the report type follows the
+ * global period. Day → Daily report, Month → Monthly report, Year → Periodic
+ * report for that year. There are no page-level date pickers.
+ *
+ * Old Report.js kept one `reportContext` across tabs and didn't clear it, so
+ * the Daily tab could preview a stale monthly report. Here the request is a
+ * pure function of the period and branch, so it can't go stale.
+ */
+export const REPORT_TYPE_BY_KIND: Record<PeriodKind, ReportType> = {
+  day: "daily",
+  month: "monthly",
+  year: "periodic",
+}
+
+export const KIND_BY_REPORT_TYPE: Record<ReportType, PeriodKind> = {
+  daily: "day",
+  monthly: "month",
+  periodic: "year",
+}
+
+export const REPORT_TYPE_LABEL: Record<ReportType, string> = {
+  daily: "Daily",
+  monthly: "Monthly",
+  periodic: "Periodic",
+}
+
+export function reportRequest(period: Period, branchId: number): ReportRequest {
+  if (period.kind === "day") {
+    return {
+      report_type: "daily",
+      branch_id: branchId,
+      date: isoDate(periodStart(period)),
+    }
+  }
+  if (period.kind === "month") {
+    return {
+      report_type: "monthly",
+      branch_id: branchId,
+      ...periodMonthYear(period),
+    }
+  }
+  // A Year runs 1 Jan → 31 Dec, or → today for the current year.
+  return {
+    report_type: "periodic",
+    branch_id: branchId,
+    start_date: isoDate(periodStart(period)),
+    end_date: isoDate(periodEnd(period)),
+  }
+}
+
+/** Stable query-key parts for a request. */
+export const reportRequestKey = (request: ReportRequest) =>
+  Object.entries(request)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join("&")
+
+/**
+ * The period to switch to when the user picks a report type on the page.
+ * Same anchor rule as the global period picker; a Daily report defaults to
+ * yesterday when the current period contains today (the scheduled daily
+ * report also covers yesterday).
+ */
+export function periodForReportType(
+  period: Period,
+  type: ReportType,
+  now = new Date()
+): Period {
+  const kind = KIND_BY_REPORT_TYPE[type]
+  const start = periodStart(period)
+  const containsToday =
+    !isAfter(start, now) && !isAfter(now, periodEnd(period, now))
+  let anchor = containsToday ? now : start
+  if (kind === "day" && containsToday) {
+    const yesterday = subDays(now, 1)
+    anchor = isAfter(start, yesterday) ? now : yesterday
+  }
+  return { kind, anchor: periodStart({ kind, anchor }) }
+}

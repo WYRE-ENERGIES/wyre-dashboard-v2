@@ -1,14 +1,32 @@
 "use client"
 
-import { FactoryIcon, FuelIcon, SunIcon, UtilityPoleIcon, ZapIcon, type LucideIcon } from "lucide-react"
+import {
+  FactoryIcon,
+  FuelIcon,
+  SunIcon,
+  UtilityPoleIcon,
+  ZapIcon,
+  type LucideIcon,
+} from "lucide-react"
 
-import { CardError, statCardClass } from "@/components/dashboard/card-parts"
+import { CardError, statCardClass } from "@/components/shared/card-parts"
 import type { useDashboardData } from "@/components/dashboard/use-dashboard-data"
 import { useFilters } from "@/components/filters-provider"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { sourceUsage } from "@/lib/dashboard/metrics"
-import { formatDeviceName, formatHours, formatNaira, formatNumber } from "@/lib/format"
+import {
+  formatDeviceName,
+  formatHours,
+  formatNaira,
+  formatNumber,
+} from "@/lib/format"
 
 const ICONS: Record<string, LucideIcon> = {
   UTILITY: UtilityPoleIcon,
@@ -18,7 +36,11 @@ const ICONS: Record<string, LucideIcon> = {
 }
 
 /** One card per energy source: kWh, hours of use, and cost when billed. */
-export function SourceCards({ data }: { data: ReturnType<typeof useDashboardData> }) {
+export function SourceCards({
+  data,
+}: {
+  data: ReturnType<typeof useDashboardData>
+}) {
   const { selectedDeviceIds } = useFilters()
   const query = data.deviceUsage
 
@@ -68,19 +90,27 @@ function SourceGrid({ sources }: { sources: ReturnType<typeof sourceUsage> }) {
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0">
-                  <CardTitle className="truncate">{formatDeviceName(source.name)}</CardTitle>
-                  <CardDescription className="capitalize">{source.deviceType.toLowerCase()}</CardDescription>
+                  <CardTitle className="truncate">
+                    {formatDeviceName(source.name)}
+                  </CardTitle>
+                  <CardDescription className="capitalize">
+                    {source.deviceType.toLowerCase()}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-1">
               <span className="font-heading text-xl font-semibold tabular-nums">
                 {formatNumber(source.kwh)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">kWh</span>
+                <span className="ml-1 text-sm font-normal text-muted-foreground">
+                  kWh
+                </span>
               </span>
               <span className="flex justify-between text-xs text-muted-foreground">
                 <span>{formatHours(source.hours)} of use</span>
-                {source.naira !== null && <span>{formatNaira(source.naira)}</span>}
+                {source.naira !== null && (
+                  <span>{formatNaira(source.naira)}</span>
+                )}
               </span>
             </CardContent>
           </Card>

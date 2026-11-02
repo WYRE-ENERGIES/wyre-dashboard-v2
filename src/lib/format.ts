@@ -14,7 +14,10 @@ export function formatNaira(value: number | null | undefined) {
 
 /** Decimal hours → "16 h 20 min" (the old app's convertDecimalTimeToNormal). */
 export function formatHours(decimalHours: number | null | undefined) {
-  const total = typeof decimalHours === "number" && Number.isFinite(decimalHours) ? decimalHours : 0
+  const total =
+    typeof decimalHours === "number" && Number.isFinite(decimalHours)
+      ? decimalHours
+      : 0
   const hours = Math.floor(total)
   const minutes = Math.round((total - hours) * 60)
   if (minutes === 60) return `${hours + 1} h 0 min`

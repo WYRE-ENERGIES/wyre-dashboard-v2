@@ -19,7 +19,9 @@ import { DEMO } from "@/lib/demo"
 
 /** Only allow same-app redirects after sign-in. */
 function safeRedirect(from: string | null) {
-  return from && from.startsWith("/") && !from.startsWith("//") ? from : "/dashboard"
+  return from && from.startsWith("/") && !from.startsWith("//")
+    ? from
+    : "/dashboard"
 }
 
 export function LoginForm() {
@@ -40,7 +42,10 @@ export function LoginForm() {
     setError(null)
     setPending(true)
     try {
-      const response = await login(String(form.get("username")), String(form.get("password")))
+      const response = await login(
+        String(form.get("username")),
+        String(form.get("password"))
+      )
       signIn(response.data.token)
     } catch (err) {
       setError(
@@ -54,7 +59,10 @@ export function LoginForm() {
 
   return (
     <>
-      <AuthHeading title="Welcome back" description="Sign in to your Wyre account." />
+      <AuthHeading
+        title="Welcome back"
+        description="Sign in to your Wyre account."
+      />
       <form onSubmit={onSubmit}>
         <FieldGroup>
           {error && (
@@ -65,7 +73,13 @@ export function LoginForm() {
           )}
           <Field>
             <FieldLabel htmlFor="username">Username</FieldLabel>
-            <Input id="username" name="username" autoComplete="username" required autoFocus />
+            <Input
+              id="username"
+              name="username"
+              autoComplete="username"
+              required
+              autoFocus
+            />
           </Field>
           <Field>
             <div className="flex items-center justify-between">
@@ -77,7 +91,12 @@ export function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <PasswordInput id="password" name="password" autoComplete="current-password" required />
+            <PasswordInput
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              required
+            />
           </Field>
           <Button type="submit" size="lg" disabled={pending} className="w-full">
             {pending && <Spinner />}

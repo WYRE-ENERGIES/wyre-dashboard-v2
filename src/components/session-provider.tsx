@@ -38,7 +38,11 @@ const getAccess = () => readTokens()?.access ?? null
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
-  const access = React.useSyncExternalStore(subscribe, getAccess, () => undefined)
+  const access = React.useSyncExternalStore(
+    subscribe,
+    getAccess,
+    () => undefined
+  )
 
   const claims = React.useMemo(
     () =>
@@ -73,12 +77,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [claims, queryClient]
   )
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  )
 }
 
 export function useSession() {
   const context = React.useContext(SessionContext)
-  if (!context) throw new Error("useSession must be used within <SessionProvider>")
+  if (!context)
+    throw new Error("useSession must be used within <SessionProvider>")
   return context
 }
 
