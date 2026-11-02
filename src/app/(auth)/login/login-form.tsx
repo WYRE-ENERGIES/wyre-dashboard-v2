@@ -86,7 +86,7 @@ export function LoginForm() {
               <FieldLabel htmlFor="password">Password</FieldLabel>
               <Link
                 href="/reset-password"
-                className="text-sm text-primary underline-offset-4 hover:underline dark:text-primary-foreground"
+                className="text-sm text-primary underline-offset-4 hover:underline"
               >
                 Forgot password?
               </Link>

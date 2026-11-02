@@ -86,7 +86,7 @@ function SourceGrid({ sources }: { sources: ReturnType<typeof sourceUsage> }) {
           <Card key={source.deviceId} size="sm" className={statCardClass}>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/30 dark:text-primary-foreground">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-brand/10 text-brand dark:bg-brand/25">
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0">

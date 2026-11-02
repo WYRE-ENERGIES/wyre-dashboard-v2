@@ -44,13 +44,13 @@ export function KpiCards({ data }: { data: Data }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card className="bg-primary text-primary-foreground ring-0">
+      <Card className="bg-brand text-brand-foreground ring-0">
         <CardHeader>
-          <CardDescription className="text-primary-foreground/80">
+          <CardDescription className="text-brand-foreground/80">
             Total energy
           </CardDescription>
           <CardAction>
-            <InfoHint className="text-primary-foreground/70 hover:text-primary-foreground">
+            <InfoHint className="text-brand-foreground/70 hover:text-brand-foreground">
               Energy used by the building over the selected period, from all
               sources. Solar hours is the energy used between 8am and 6pm, when
               the sun is expected to be out.
@@ -59,11 +59,11 @@ export function KpiCards({ data }: { data: Data }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
           {data.totalEnergy.isPending ? (
-            <ValueSkeleton className="bg-primary-foreground/20" />
+            <ValueSkeleton className="bg-brand-foreground/20" />
           ) : data.totalEnergy.isError ? (
             <CardError
               onRetry={() => data.totalEnergy.refetch()}
-              className="text-primary-foreground/80"
+              className="text-brand-foreground/80"
             />
           ) : (
             <>
@@ -73,7 +73,7 @@ export function KpiCards({ data }: { data: Data }) {
                 className="text-3xl"
               />
               {showsSolarHoursLine(claims) && (
-                <span className="flex items-center gap-1.5 text-sm text-primary-foreground/80">
+                <span className="flex items-center gap-1.5 text-sm text-brand-foreground/80">
                   <SunIcon
                     className="size-4 shrink-0 text-highlight"
                     aria-hidden

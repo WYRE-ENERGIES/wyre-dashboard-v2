@@ -167,7 +167,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3">
         <div className="flex h-8 items-center px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <WyreLogo className="h-7 text-primary" />
+          <WyreLogo className="h-7 text-brand" />
         </div>
         <BranchSwitcher />
       </SidebarHeader>

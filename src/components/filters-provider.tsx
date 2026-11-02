@@ -82,3 +82,30 @@ export function useFilters() {
     throw new Error("useFilters must be used within <FiltersProvider>")
   return context
 }
+
+const ALL_DEVICES: number[] = []
+const ignoreDeviceSelection = () => {}
+
+/**
+ * Re-provides the filters with every device selected, for views that cover
+ * the whole branch (reports), so shared dashboard cards ignore the device
+ * filter there.
+ */
+export function WholeBranchFilters({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const filters = useFilters()
+  const value = React.useMemo(
+    () => ({
+      ...filters,
+      selectedDeviceIds: ALL_DEVICES,
+      setSelectedDeviceIds: ignoreDeviceSelection,
+    }),
+    [filters]
+  )
+  return (
+    <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
+  )
+}

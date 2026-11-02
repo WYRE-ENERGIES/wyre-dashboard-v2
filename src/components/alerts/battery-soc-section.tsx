@@ -297,13 +297,13 @@ function Thresholds({
         >
           <ToggleGroupItem
             value="lte"
-            className="data-pressed:border-primary data-pressed:bg-primary/10"
+            className="data-pressed:border-brand data-pressed:bg-brand/10"
           >
             Drops to or below (≤)
           </ToggleGroupItem>
           <ToggleGroupItem
             value="gte"
-            className="data-pressed:border-primary data-pressed:bg-primary/10"
+            className="data-pressed:border-brand data-pressed:bg-brand/10"
           >
             Rises to or above (≥)
           </ToggleGroupItem>

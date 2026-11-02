@@ -64,7 +64,10 @@ export function AlertsView() {
         }
       />
       {isOperator(claims) ? (
-        <AlertsSettings branchId={claims.branch_id} solarOnly={solarOnly} />
+        // Purple controls in light mode as well (see .brand-controls).
+        <div className="brand-controls contents">
+          <AlertsSettings branchId={claims.branch_id} solarOnly={solarOnly} />
+        </div>
       ) : (
         <NotAllowed />
       )}

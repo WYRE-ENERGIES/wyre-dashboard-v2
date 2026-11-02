@@ -201,18 +201,15 @@ function BillingContent({
           naira={t.previousNaira}
           state={state}
         />
-        <Card
-          size="sm"
-          className="bg-primary text-primary-foreground ring-primary"
-        >
+        <Card size="sm" className="bg-brand text-brand-foreground ring-0">
           <CardHeader>
-            <CardDescription className="text-primary-foreground/80">
+            <CardDescription className="text-brand-foreground/80">
               Total payable
             </CardDescription>
           </CardHeader>
           <CardContent>
             {state.loading ? (
-              <ValueSkeleton className="bg-primary-foreground/20" />
+              <ValueSkeleton className="bg-brand-foreground/20" />
             ) : state.error ? (
               <span className="text-sm">—</span>
             ) : (

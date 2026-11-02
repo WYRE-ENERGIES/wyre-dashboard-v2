@@ -197,8 +197,8 @@ export function FuelBreakupCard({ data }: { data: DieselData }) {
 }
 
 const usageConfig = {
-  reportedLitres: { label: "Reported usage", color: "var(--chart-1)" },
-  emsLitres: { label: "EMS usage", color: "var(--chart-3)" },
+  reportedLitres: { label: "Reported usage", color: "var(--chart-2)" },
+  emsLitres: { label: "EMS usage", color: "var(--chart-5)" },
 } satisfies ChartConfig
 
 /**

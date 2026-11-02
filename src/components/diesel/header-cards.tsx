@@ -68,7 +68,7 @@ export function DieselHeaderCards({ data }: { data: DieselData }) {
                     className={cn(
                       "size-2.5 shrink-0 rounded-full",
                       g.isOn
-                        ? "bg-primary ring-4 ring-primary/20"
+                        ? "bg-highlight ring-4 ring-highlight/30"
                         : "bg-muted-foreground/40"
                     )}
                     aria-hidden
@@ -81,7 +81,12 @@ export function DieselHeaderCards({ data }: { data: DieselData }) {
                       {g.lastUsed ? `Last used ${g.lastUsed}` : "No recent use"}
                     </span>
                   </span>
-                  <Badge variant={g.isOn ? "default" : "outline"}>
+                  <Badge
+                    variant={g.isOn ? "default" : "outline"}
+                    className={cn(
+                      g.isOn && "bg-highlight text-highlight-foreground"
+                    )}
+                  >
                     {g.isOn ? "Running" : "Off"}
                   </Badge>
                 </li>

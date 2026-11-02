@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               logo and devices on top, the period picker on its own row. */}
           <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-2 gap-y-3 border-b bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80">
             <SidebarTrigger className="order-1 -ml-1" />
-            <WyreLogo className="order-2 h-6 text-primary md:hidden" />
+            <WyreLogo className="order-2 h-6 text-brand md:hidden" />
             <Separator
               orientation="vertical"
               className="order-2 mr-1 hidden h-5 md:block"

@@ -3,8 +3,9 @@
 import { CalendarClockIcon } from "lucide-react"
 
 import { useFilters } from "@/components/filters-provider"
-import { EmailPreview } from "@/components/report/email-preview"
+import { EmailVersionDialog } from "@/components/report/email-preview"
 import { MonthlyReport } from "@/components/report/monthly-report"
+import { PeriodReport } from "@/components/report/period-report"
 import { SendReportDialog } from "@/components/report/send-report-dialog"
 import { useClaims } from "@/components/session-provider"
 import { PageHeader } from "@/components/shared/page-header"
@@ -31,7 +32,8 @@ const TYPES: ReportType[] = ["daily", "monthly", "periodic"]
  * /report. The report type follows the global period (Day → Daily, Month →
  * Monthly, Year → Periodic for that year); the tabs are a shortcut that
  * switches the global period kind. Reports cover the whole branch, so the
- * device filter doesn't apply.
+ * device filter doesn't apply. Every type renders in the dashboard's own
+ * cards and charts; "Email version" shows the email as the backend sends it.
  */
 export function ReportView() {
   const { branch_id: branchId } = useClaims()
@@ -46,7 +48,12 @@ export function ReportView() {
       <PageHeader
         title="Report"
         description={`${REPORT_TYPE_LABEL[type]} report for ${title}. Reports cover the whole branch.`}
-        actions={<SendReportDialog request={request} title={title} />}
+        actions={
+          <>
+            {request && <EmailVersionDialog request={request} title={title} />}
+            <SendReportDialog request={request} title={title} />
+          </>
+        }
       />
       <Tabs
         value={type}
@@ -82,7 +89,7 @@ export function ReportView() {
           year={request.year}
         />
       ) : (
-        <EmailPreview request={request} title={title} />
+        <PeriodReport request={request} />
       )}
     </>
   )

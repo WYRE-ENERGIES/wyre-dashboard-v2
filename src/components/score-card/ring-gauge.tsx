@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils"
 import type { Tone } from "@/lib/score-card/metrics"
 
 const TONE_STROKE: Record<Tone | "default", string> = {
-  default: "stroke-primary",
-  good: "stroke-primary",
+  default: "stroke-brand",
+  good: "stroke-brand",
   fair: "stroke-highlight",
   bad: "stroke-destructive",
 }
@@ -74,7 +74,7 @@ export function RingGauge({
 }
 
 const TONE_BADGE: Record<Tone, string> = {
-  good: "bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-foreground",
+  good: "bg-brand/10 text-brand dark:bg-brand/25",
   fair: "bg-highlight/30 text-highlight-foreground dark:bg-highlight/15 dark:text-highlight",
   bad: "bg-destructive/10 text-destructive dark:bg-destructive/20",
 }
@@ -103,7 +103,7 @@ export function RatingBadge({
 }
 
 export const TONE_TEXT: Record<Tone, string> = {
-  good: "text-primary dark:text-primary-foreground",
+  good: "text-brand",
   fair: "text-highlight-foreground dark:text-highlight",
   bad: "text-destructive",
 }

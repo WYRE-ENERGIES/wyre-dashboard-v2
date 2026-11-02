@@ -231,8 +231,8 @@ function SeriesChart({
 
 const PARAMETERS = {
   production: { label: "Production", color: "var(--chart-5)" },
-  grid: { label: "Grid", color: "var(--chart-3)" },
-  load: { label: "Load", color: "var(--chart-1)" },
+  grid: { label: "Grid", color: "var(--chart-1)" },
+  load: { label: "Load", color: "var(--chart-2)" },
 } as const
 type Parameter = keyof typeof PARAMETERS
 
@@ -458,7 +458,7 @@ export function BatteryChart({ data }: { data: SolarData }) {
             rows={rows}
             series={[
               { key: "charge", label: "Charge", color: "var(--chart-1)" },
-              { key: "discharge", label: "Discharge", color: "var(--chart-3)" },
+              { key: "discharge", label: "Discharge", color: "var(--chart-5)" },
             ]}
             unit={g.unit}
             asArea={g.isDay}

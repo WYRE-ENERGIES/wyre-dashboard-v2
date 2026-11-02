@@ -265,10 +265,7 @@ export function CarbonEmissionCard() {
             </Row>
           </dl>
           <p className="flex items-center gap-2 text-sm">
-            <TreesIcon
-              className="size-4 shrink-0 text-primary dark:text-primary-foreground"
-              aria-hidden
-            />
+            <TreesIcon className="size-4 shrink-0 text-primary" aria-hidden />
             {carbon.trees != null
               ? `Equivalent to ${formatNumber(carbon.trees)} Acacia trees`
               : "On pace to exceed the estimate, so no trees' worth saved yet."}

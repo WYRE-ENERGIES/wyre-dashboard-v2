@@ -200,7 +200,7 @@ function BranchSection({
               aria-hidden
               className={cn(
                 "size-1.5 rounded-full",
-                value === "ON" ? "bg-primary" : "bg-muted-foreground/40"
+                value === "ON" ? "bg-highlight" : "bg-muted-foreground/40"
               )}
             />
             {statusText(value)}

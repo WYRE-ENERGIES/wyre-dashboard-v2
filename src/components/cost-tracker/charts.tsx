@@ -84,8 +84,8 @@ export function CostChart({
   const data = costBuckets(period, diesel, utility, showIpp ? ipp : [])
   const config: ChartConfig = {
     diesel: { label: "Diesel", color: "var(--chart-1)" },
-    utility: { label: "Utility", color: "var(--chart-3)" },
-    ...(showIpp ? { ipp: { label: "IPP", color: "var(--chart-2)" } } : {}),
+    utility: { label: "Utility", color: "var(--chart-2)" },
+    ...(showIpp ? { ipp: { label: "IPP", color: "var(--chart-5)" } } : {}),
   }
   const keys = Object.keys(config) as Array<"diesel" | "utility" | "ipp">
   const total = data.reduce((t, b) => t + b.diesel + b.utility + b.ipp, 0)
@@ -185,7 +185,7 @@ export function BaselineChart({
     .map((d) => d.name)
   const data = baselineBuckets(response?.data?.baseline, period, deviceNames)
   const config: ChartConfig = {
-    used: { label: "Consumption", color: "var(--chart-1)" },
+    used: { label: "Consumption", color: "var(--chart-2)" },
     forecast: { label: "Forecast", color: "var(--chart-5)" },
   }
   const empty = data.every((b) => b.used === 0 && b.forecast === 0)

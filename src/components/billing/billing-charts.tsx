@@ -151,7 +151,7 @@ export function BillingNairaChart({
   state: State
 }) {
   const config: ChartConfig = {
-    naira: { label: "Cost", color: "var(--chart-1)" },
+    naira: { label: "Cost", color: "var(--chart-2)" },
   }
   const granularity = GRANULARITY[period.kind]
   return (

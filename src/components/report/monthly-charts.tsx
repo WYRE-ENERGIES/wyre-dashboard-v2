@@ -167,8 +167,8 @@ export function BatteryChart({
 }) {
   const config: ChartConfig = {
     energyKwh: { label: "Energy provided (kWh)", color: "var(--chart-1)" },
-    hours: { label: "Discharge duration (hours)", color: "var(--chart-3)" },
-    maxSoc: { label: "Max SOC (%)", color: "var(--chart-5)" },
+    hours: { label: "Discharge duration (hours)", color: "var(--chart-5)" },
+    maxSoc: { label: "Max SOC (%)", color: "var(--chart-2)" },
   }
   // Tick on the first and last day and every 5th day.
   const ticks = battery.points
@@ -260,9 +260,9 @@ export function PowerDemandChart({
   demand: MonthlyReportModel["powerDemand"]
 }) {
   const config: ChartConfig = {
-    min: { label: "Min", color: "var(--chart-4)" },
-    average: { label: "Average", color: "var(--chart-2)" },
-    max: { label: "Max", color: "var(--chart-1)" },
+    min: { label: "Min", color: "var(--chart-5)" },
+    average: { label: "Average", color: "var(--chart-3)" },
+    max: { label: "Max", color: "var(--chart-2)" },
   }
   return (
     <ChartContainer config={config} className="aspect-auto h-64 w-full">

@@ -38,8 +38,8 @@ const PERIODS = [
   "previous_month_2",
 ] as const
 
-/** Source colours: utility the brand purple, generators the lighter purples,
- * solar the brand yellow (same rule as the dashboard's seriesColors). */
+/** Source colours: utility the brand purple, generators cyan, blue and
+ * coral, solar the brand yellow (as the dashboard's seriesColors). */
 export function sourceColor(
   kind: "utility" | "generator" | "solar",
   index = 0

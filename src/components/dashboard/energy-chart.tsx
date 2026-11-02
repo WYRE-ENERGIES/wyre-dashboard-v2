@@ -39,6 +39,40 @@ export function EnergyChart({
 }: {
   data: ReturnType<typeof useDashboardData>
 }) {
+  const { period } = useFilters()
+  const granularity = GRANULARITY[period.kind]
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{TITLES[granularity]} by source</CardTitle>
+        <CardDescription>{periodLabel(period)} · kWh</CardDescription>
+        <CardAction>
+          <InfoHint>
+            Energy consumed per{" "}
+            {granularity === "hourly"
+              ? "hour"
+              : granularity === "daily"
+                ? "day"
+                : "month"}
+            , split by the source that supplied it.
+          </InfoHint>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <EnergyChartBody data={data} />
+      </CardContent>
+    </Card>
+  )
+}
+
+/** The chart alone (loading, error and empty states included), for reuse
+ * inside other cards such as the reports. */
+export function EnergyChartBody({
+  data,
+}: {
+  data: ReturnType<typeof useDashboardData>
+}) {
   const { period, selectedDeviceIds } = useFilters()
   const granularity = GRANULARITY[period.kind]
   // Day uses device_usage's hourly series; Month and Year use daily_consumption.
@@ -59,88 +93,69 @@ export function EnergyChart({
   )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{TITLES[granularity]} by source</CardTitle>
-        <CardDescription>{periodLabel(period)} · kWh</CardDescription>
-        <CardAction>
-          <InfoHint>
-            Energy consumed per{" "}
-            {granularity === "hourly"
-              ? "hour"
-              : granularity === "daily"
-                ? "day"
-                : "month"}
-            , split by the source that supplied it.
-          </InfoHint>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        {query.isPending ? (
-          <Skeleton className="h-72 w-full" />
-        ) : query.isError ? (
-          <CardError onRetry={() => query.refetch()} />
-        ) : series.devices.length === 0 ? (
-          <p className="flex h-72 items-center justify-center text-sm text-muted-foreground">
-            No energy sources in the current selection.
-          </p>
-        ) : (
-          <ChartContainer config={config} className="aspect-auto h-72 w-full">
-            <BarChart data={series.rows} margin={{ left: 4, right: 4 }}>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={granularity === "hourly" ? 16 : 4}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={48}
-                tickFormatter={(value: number) => formatNumber(value, 0)}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) =>
-                      payload?.[0]?.payload?.tooltipLabel ?? ""
-                    }
-                    formatter={(value, name, item) => (
-                      <div className="flex w-full items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <span
-                            className="size-2.5 rounded-[2px]"
-                            style={{ background: item.color }}
-                          />
-                          {config[String(name)]?.label ?? name}
-                        </span>
-                        <span className="font-mono text-foreground tabular-nums">
-                          {formatNumber(Number(value))} kWh
-                        </span>
-                      </div>
-                    )}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              {series.devices.map((device, index) => (
-                <Bar
-                  key={device.key}
-                  dataKey={device.key}
-                  stackId="energy"
-                  fill={`var(--color-${device.key})`}
-                  radius={
-                    index === series.devices.length - 1 ? [4, 4, 0, 0] : 0
+    <>
+      {query.isPending ? (
+        <Skeleton className="h-72 w-full" />
+      ) : query.isError ? (
+        <CardError onRetry={() => query.refetch()} />
+      ) : series.devices.length === 0 ? (
+        <p className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+          No energy sources in the current selection.
+        </p>
+      ) : (
+        <ChartContainer config={config} className="aspect-auto h-72 w-full">
+          <BarChart data={series.rows} margin={{ left: 4, right: 4 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={granularity === "hourly" ? 16 : 4}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              width={48}
+              tickFormatter={(value: number) => formatNumber(value, 0)}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(_, payload) =>
+                    payload?.[0]?.payload?.tooltipLabel ?? ""
                   }
+                  formatter={(value, name, item) => (
+                    <div className="flex w-full items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                          className="size-2.5 rounded-[2px]"
+                          style={{ background: item.color }}
+                        />
+                        {config[String(name)]?.label ?? name}
+                      </span>
+                      <span className="font-mono text-foreground tabular-nums">
+                        {formatNumber(Number(value))} kWh
+                      </span>
+                    </div>
+                  )}
                 />
-              ))}
-            </BarChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+              }
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            {series.devices.map((device, index) => (
+              <Bar
+                key={device.key}
+                dataKey={device.key}
+                stackId="energy"
+                fill={`var(--color-${device.key})`}
+                radius={index === series.devices.length - 1 ? [4, 4, 0, 0] : 0}
+              />
+            ))}
+          </BarChart>
+        </ChartContainer>
+      )}
+    </>
   )
 }

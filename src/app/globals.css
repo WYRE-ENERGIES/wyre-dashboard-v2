@@ -5,42 +5,46 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Wyre brand: primary purple #5C12A7, highlight yellow #FCD642.
-     Neutrals carry a faint purple tint (hue 298) so the palette blends. */
+  /* Wyre brand: purple #5C12A7 (--brand) and yellow #FCD642 (--highlight).
+     Buttons are near-black (--primary); purple marks brand surfaces (hero
+     cards, logo, active nav); charts use the multi-hue palette below. */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.17 0.02 298);
+  --foreground: oklch(0.17 0.012 298);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.02 298);
+  --card-foreground: oklch(0.17 0.012 298);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.02 298);
-  --primary: oklch(0.407 0.206 298.1);
-  --primary-foreground: oklch(0.985 0.006 298);
-  --secondary: oklch(0.966 0.012 298);
-  --secondary-foreground: oklch(0.28 0.08 298);
-  --muted: oklch(0.966 0.008 298);
-  --muted-foreground: oklch(0.52 0.03 298);
-  --accent: oklch(0.95 0.025 298);
-  --accent-foreground: oklch(0.32 0.15 298);
+  --popover-foreground: oklch(0.17 0.012 298);
+  --primary: oklch(0.21 0.015 298);
+  --primary-foreground: oklch(0.985 0.002 298);
+  --brand: oklch(0.407 0.206 298.1);
+  --brand-foreground: oklch(0.985 0.006 298);
+  --secondary: oklch(0.97 0.01 298);
+  --secondary-foreground: oklch(0.21 0.015 298);
+  --muted: oklch(0.968 0.003 298);
+  --muted-foreground: oklch(0.52 0.012 298);
+  --accent: oklch(0.955 0.004 298);
+  --accent-foreground: oklch(0.21 0.015 298);
   --highlight: oklch(0.884 0.162 94);
   --highlight-foreground: oklch(0.3 0.06 80);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.915 0.012 298);
-  --input: oklch(0.915 0.012 298);
+  --border: oklch(0.92 0.004 298);
+  --input: oklch(0.92 0.004 298);
   --ring: oklch(0.58 0.17 298);
-  /* Charts: shades of the brand purple; chart-5 is the yellow highlight. */
-  --chart-1: oklch(0.407 0.206 298.1);
-  --chart-2: oklch(0.54 0.19 298);
-  --chart-3: oklch(0.67 0.14 298);
-  --chart-4: oklch(0.8 0.08 298);
-  --chart-5: oklch(0.884 0.162 94);
+  /* Charts (validated for colour-blind separation): purple, cyan, blue,
+     coral; chart-5 is the brand yellow, used for solar. */
+  --chart-1: oklch(0.467 0.23 295.7);
+  --chart-2: oklch(0.7 0.126 221.9);
+  --chart-3: oklch(0.519 0.183 263.4);
+  --chart-4: oklch(0.713 0.146 27.8);
+  --chart-5: oklch(0.82 0.161 89.7);
   --radius: 0.625rem;
-  --sidebar: oklch(0.982 0.006 298);
-  --sidebar-foreground: oklch(0.17 0.02 298);
+  --sidebar: oklch(0.985 0.002 298);
+  --sidebar-foreground: oklch(0.17 0.012 298);
   --sidebar-primary: oklch(0.407 0.206 298.1);
   --sidebar-primary-foreground: oklch(0.985 0.006 298);
-  --sidebar-accent: oklch(0.95 0.025 298);
-  --sidebar-accent-foreground: oklch(0.32 0.15 298);
-  --sidebar-border: oklch(0.915 0.012 298);
+  --sidebar-accent: oklch(0.95 0.004 298);
+  --sidebar-accent-foreground: oklch(0.17 0.012 298);
+  --sidebar-border: oklch(0.92 0.004 298);
   --sidebar-ring: oklch(0.58 0.17 298);
 }
 
@@ -53,6 +57,8 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.5 0.21 298);
   --primary-foreground: oklch(0.985 0.006 298);
+  --brand: oklch(0.62 0.19 298);
+  --brand-foreground: oklch(0.985 0.006 298);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -65,10 +71,10 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.6 0.16 298);
-  --chart-1: oklch(0.5 0.21 298);
-  --chart-2: oklch(0.62 0.18 298);
-  --chart-3: oklch(0.74 0.12 298);
-  --chart-4: oklch(0.85 0.06 298);
+  --chart-1: oklch(0.611 0.2 301.8);
+  --chart-2: oklch(0.768 0.126 219.2);
+  --chart-3: oklch(0.655 0.156 262.5);
+  --chart-4: oklch(0.749 0.129 27.5);
   --chart-5: oklch(0.884 0.162 94);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -99,6 +105,8 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
   --color-destructive: var(--destructive);
@@ -135,6 +143,13 @@
   html {
     @apply font-sans;
   }
+}
+
+/* Pages whose controls (switches, toggles, buttons) use the brand purple in
+   light mode too, as they do in dark mode. */
+:root:not(.dark) .brand-controls {
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
 }
 
 /* Fills the active slide's bar in the sign-in feature carousel. */

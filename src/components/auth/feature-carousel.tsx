@@ -84,7 +84,7 @@ export function FeatureCarousel() {
           <p className="font-heading text-3xl leading-tight font-semibold">
             {feature.title}
           </p>
-          <p className="mt-3 text-primary-foreground/75">{feature.body}</p>
+          <p className="mt-3 text-brand-foreground/75">{feature.body}</p>
         </div>
       </div>
 
@@ -101,10 +101,10 @@ export function FeatureCarousel() {
               className={cn(
                 "group relative h-1 overflow-hidden rounded-full transition-[width,background-color] duration-300 outline-none",
                 "before:absolute before:inset-x-0 before:-inset-y-3 before:content-['']", // larger hit area
-                "focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-offset-4 focus-visible:ring-offset-primary",
+                "focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-offset-4 focus-visible:ring-offset-brand",
                 active
-                  ? "w-16 bg-primary-foreground/25"
-                  : "w-6 bg-primary-foreground/25 hover:bg-primary-foreground/45"
+                  ? "w-16 bg-brand-foreground/25"
+                  : "w-6 bg-brand-foreground/25 hover:bg-brand-foreground/45"
               )}
             >
               {active && (

@@ -52,8 +52,8 @@ import { GRANULARITY, periodLabel, type Period } from "@/lib/period"
 // Phases stay in the purple family; lightness plus dash pattern tell them apart.
 const PHASE_STYLE: Record<string, { color: string; dash?: string }> = {
   l1: { color: "var(--chart-1)" },
-  l2: { color: "var(--chart-3)" },
-  l3: { color: "var(--chart-2)", dash: "6 3" },
+  l2: { color: "var(--chart-2)" },
+  l3: { color: "var(--chart-5)", dash: "6 3" },
   neutral: { color: "var(--muted-foreground)", dash: "2 4" },
 }
 

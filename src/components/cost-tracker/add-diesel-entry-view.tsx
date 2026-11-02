@@ -208,13 +208,7 @@ function DieselEntryTabs() {
           const { start_date, end_date } = row.original
           const isRange = end_date && end_date !== start_date
           return (
-            <span
-              className={
-                isRange
-                  ? "font-medium text-primary dark:text-primary-foreground"
-                  : undefined
-              }
-            >
+            <span className={isRange ? "font-medium text-primary" : undefined}>
               {entryDateLabel(start_date, end_date)}
             </span>
           )

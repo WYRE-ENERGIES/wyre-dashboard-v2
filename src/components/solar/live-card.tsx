@@ -168,7 +168,7 @@ export function LiveCard({
                 label="PV production"
                 value={formatNumber(l.pv.kw, 3)}
                 unit="kW"
-                dot="bg-primary"
+                dot="bg-chart-1"
               />
               <LiveStat
                 label="Installed capacity"

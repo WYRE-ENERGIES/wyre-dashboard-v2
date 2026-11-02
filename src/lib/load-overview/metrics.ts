@@ -98,10 +98,13 @@ export function loadOverview(
   }
 }
 
-/** Purple shades for loads, darkest first; past four, lighter tints. */
+/** Loads take the chart palette in its fixed order (purple, cyan, yellow,
+ * blue, coral); past five, lighter tints of the same order. */
+const LOAD_ORDER = [1, 2, 5, 3, 4]
+
 export function loadColor(index: number) {
-  const shade = `var(--chart-${(index % 4) + 1})`
-  return index < 4
+  const shade = `var(--chart-${LOAD_ORDER[index % LOAD_ORDER.length]})`
+  return index < LOAD_ORDER.length
     ? shade
     : `color-mix(in oklch, ${shade} 50%, var(--background))`
 }
