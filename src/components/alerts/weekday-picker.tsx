@@ -39,7 +39,7 @@ export function WeekdayPicker({
           key={day}
           value={String(index)}
           aria-label={day}
-          className="min-w-11 data-pressed:border-primary data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90"
+          className="min-w-12 rounded-full border-brand/30 font-semibold text-brand data-pressed:border-brand data-pressed:bg-brand data-pressed:text-brand-foreground data-pressed:hover:bg-brand/90"
         >
           {day}
         </ToggleGroupItem>

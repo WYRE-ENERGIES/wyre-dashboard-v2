@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -9,7 +10,6 @@ import { toast } from "sonner"
 
 import {
   AlertRow,
-  Callout,
   ThresholdGroup,
   ThresholdInput,
 } from "@/components/alerts/fields"
@@ -172,20 +172,108 @@ function AlertsForm({
       }),
   })
 
-  const dailyOn = useWatch({
-    control: form.control,
-    name: "daily_energy_usage_alerts",
-  })
+  const watched = useWatch({ control: form.control })
   const busy = save.isPending
+  const summary = alertSummary({
+    values: watched,
+    hasBattery,
+    solarOnly,
+  })
+  const enabledSummary = summary.filter((item) => item.on)
 
   return (
     <FormProvider {...form}>
       <form
         noValidate
         onSubmit={form.handleSubmit((values) => save.mutate(values))}
-        className="flex flex-col gap-4 pb-20"
+        className="flex flex-col gap-6 pb-20"
       >
-        <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
+        <fieldset disabled={busy} className="flex min-w-0 flex-col gap-6">
+          <div className="grid items-stretch gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+            <Card className="h-44 lg:w-max">
+              <CardContent className="flex h-full flex-col justify-between">
+                <p className="font-heading text-base font-medium">
+                  Operational days
+                </p>
+                <Controller
+                  control={form.control}
+                  name="daily_energy_usage_days"
+                  render={({ field }) => (
+                    <WeekdayPicker
+                      label="Operational days"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={busy}
+                      className="lg:flex-nowrap"
+                    />
+                  )}
+                />
+              </CardContent>
+            </Card>
+            <Card className="h-44 min-w-0">
+              <CardContent className="flex h-full flex-col gap-3">
+                <p className="flex items-baseline gap-2" aria-live="polite">
+                  <span className="font-heading text-3xl font-semibold tracking-tight text-brand">
+                    {enabledSummary.length}
+                  </span>
+                  <span className="text-muted-foreground">
+                    of {summary.length} on
+                  </span>
+                </p>
+                {enabledSummary.length > 0 ? (
+                  <div className="flex max-h-16 flex-wrap content-start gap-1.5 overflow-hidden">
+                    {enabledSummary.map((item) => (
+                      <button
+                        key={item.rowId}
+                        type="button"
+                        className="rounded-full bg-brand/10 px-2.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand/15"
+                        onClick={() =>
+                          document.getElementById(item.rowId)?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          })
+                        }
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nothing is turned on yet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <SettingsSection
+            title="Energy reports"
+            description="Daily and weekly usage, sent on a fixed schedule."
+          >
+            <AlertRow
+              rowId="alert-daily-energy"
+              name="daily_energy_usage_alerts"
+              title="Daily energy usage"
+              description="Previous day’s report at 10:00 (Africa/Lagos), on your operational days."
+            />
+            <AlertRow
+              rowId="alert-weekly-energy"
+              name="weekly_energy_usage_alerts"
+              title="Weekly energy usage"
+              description="Sent every Monday at 10:00 (Africa/Lagos)."
+            />
+          </SettingsSection>
+
+          {hasBattery && (
+            <SettingsSection
+              title="Battery"
+              description="Status emails on a schedule, and a one-time alert when charge crosses a level you set."
+            >
+              <BatterySocSection solarOnly={solarOnly} />
+            </SettingsSection>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>
@@ -198,47 +286,8 @@ function AlertsForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col divide-y">
-              <div className="flex flex-col gap-3 py-4 first:pt-0">
-                <span className="text-sm font-medium">
-                  Energy usage reports
-                </span>
-                <Callout>
-                  Sent at fixed times: daily at 10:00 and weekly on Monday at
-                  10:00 (Africa/Lagos). The daily report covers the previous
-                  day.
-                </Callout>
-                <AlertRow
-                  name="daily_energy_usage_alerts"
-                  title="Daily energy usage report"
-                >
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Days that get the 10:00 daily report — untick days you
-                      don&apos;t want, e.g. weekends.
-                    </span>
-                    <Controller
-                      control={form.control}
-                      name="daily_energy_usage_days"
-                      render={({ field }) => (
-                        <WeekdayPicker
-                          label="Weekdays for the daily energy usage report"
-                          value={field.value}
-                          onChange={field.onChange}
-                          disabled={busy || !dailyOn}
-                        />
-                      )}
-                    />
-                  </div>
-                </AlertRow>
-                <AlertRow
-                  name="weekly_energy_usage_alerts"
-                  title="Weekly energy usage report"
-                />
-              </div>
-
-              {hasBattery && <BatterySocSection solarOnly={solarOnly} />}
-
               <AlertRow
+                rowId="alert-weather"
                 name="daily_unfavorable_weather_alerts"
                 title="Daily unfavourable weather alerts"
                 description={
@@ -249,6 +298,7 @@ function AlertsForm({
               />
 
               <AlertRow
+                rowId="alert-capacity"
                 name="solar_capacity_utilization_alerts"
                 title="Solar capacity utilisation"
                 description={
@@ -281,6 +331,7 @@ function AlertsForm({
               ) : (
                 <>
                   <AlertRow
+                    rowId="alert-power-factor"
                     name="power_factor_alerts"
                     title="Power factor"
                     description="When the power factor goes above the high limit or below the low limit."
@@ -299,11 +350,13 @@ function AlertsForm({
                     </ThresholdGroup>
                   </AlertRow>
                   <AlertRow
+                    rowId="alert-load-balance"
                     name="load_balance_alerts"
                     title="Load imbalance"
                     description="When the load across the three phases is unbalanced."
                   />
                   <AlertRow
+                    rowId="alert-frequency"
                     name="frequency_alerts"
                     title="Frequency variance"
                     description="When the frequency moves away from nominal by more than this amount."
@@ -316,6 +369,7 @@ function AlertsForm({
                     />
                   </AlertRow>
                   <AlertRow
+                    rowId="alert-voltage"
                     name="voltage_alerts"
                     title="Voltage"
                     description="When the voltage goes above the high limit or below the low limit."
@@ -350,10 +404,12 @@ function AlertsForm({
               </CardHeader>
               <CardContent className="flex flex-col divide-y">
                 <AlertRow
+                  rowId="alert-baseline"
                   name="baseline_alerts"
                   title="When the forecast baseline is reached"
                 />
                 <AlertRow
+                  rowId="alert-energy-target"
                   name="energy_usage_alerts"
                   title="When the energy target is reached"
                 >
@@ -364,10 +420,12 @@ function AlertsForm({
                   />
                 </AlertRow>
                 <AlertRow
+                  rowId="alert-forecast-co2"
                   name="emitted_co2_alerts"
                   title="When the forecast CO₂ is reached"
                 />
                 <AlertRow
+                  rowId="alert-co2-target"
                   name="set_co2_alerts"
                   title="When the CO₂ target is reached"
                 >
@@ -378,10 +436,12 @@ function AlertsForm({
                   />
                 </AlertRow>
                 <AlertRow
+                  rowId="alert-generator-hours"
                   name="operating_time_alerts"
                   title="When a generator runs outside operating hours"
                 />
                 <AlertRow
+                  rowId="alert-load"
                   name="load_alerts"
                   title="When the load exceeds a limit"
                 >
@@ -416,4 +476,142 @@ function AlertsForm({
       </form>
     </FormProvider>
   )
+}
+
+function SettingsSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-heading text-lg font-semibold tracking-tight">
+          {title}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Card>
+        <CardContent className="flex flex-col divide-y">{children}</CardContent>
+      </Card>
+    </section>
+  )
+}
+
+function alertSummary({
+  values,
+  hasBattery,
+  solarOnly,
+}: {
+  values: {
+    daily_energy_usage_alerts?: boolean
+    weekly_energy_usage_alerts?: boolean
+    daily_unfavorable_weather_alerts?: boolean
+    solar_capacity_utilization_alerts?: boolean
+    power_factor_alerts?: boolean
+    load_balance_alerts?: boolean
+    frequency_alerts?: boolean
+    voltage_alerts?: boolean
+    baseline_alerts?: boolean
+    energy_usage_alerts?: boolean
+    emitted_co2_alerts?: boolean
+    set_co2_alerts?: boolean
+    operating_time_alerts?: boolean
+    load_alerts?: boolean
+    soc?: { email_enabled?: boolean }
+  }
+  hasBattery: boolean
+  solarOnly: boolean
+}) {
+  const on = (value: boolean | undefined) => Boolean(value)
+  const summary = [
+    {
+      rowId: "alert-daily-energy",
+      label: "Daily energy",
+      on: on(values.daily_energy_usage_alerts),
+    },
+    {
+      rowId: "alert-weekly-energy",
+      label: "Weekly energy",
+      on: on(values.weekly_energy_usage_alerts),
+    },
+  ]
+  if (hasBattery) {
+    summary.push({
+      rowId: "alert-battery",
+      label: "Battery level",
+      on: Boolean(values.soc?.email_enabled),
+    })
+  }
+  summary.push(
+    {
+      rowId: "alert-weather",
+      label: "Weather",
+      on: on(values.daily_unfavorable_weather_alerts),
+    },
+    {
+      rowId: "alert-capacity",
+      label: "Solar capacity",
+      on: on(values.solar_capacity_utilization_alerts),
+    }
+  )
+  if (!solarOnly) {
+    summary.push(
+      {
+        rowId: "alert-power-factor",
+        label: "Power factor",
+        on: on(values.power_factor_alerts),
+      },
+      {
+        rowId: "alert-load-balance",
+        label: "Load balance",
+        on: on(values.load_balance_alerts),
+      },
+      {
+        rowId: "alert-frequency",
+        label: "Frequency",
+        on: on(values.frequency_alerts),
+      },
+      {
+        rowId: "alert-voltage",
+        label: "Voltage",
+        on: on(values.voltage_alerts),
+      },
+      {
+        rowId: "alert-baseline",
+        label: "Baseline",
+        on: on(values.baseline_alerts),
+      },
+      {
+        rowId: "alert-energy-target",
+        label: "Energy target",
+        on: on(values.energy_usage_alerts),
+      },
+      {
+        rowId: "alert-forecast-co2",
+        label: "Forecast CO₂",
+        on: on(values.emitted_co2_alerts),
+      },
+      {
+        rowId: "alert-co2-target",
+        label: "CO₂ target",
+        on: on(values.set_co2_alerts),
+      },
+      {
+        rowId: "alert-generator-hours",
+        label: "Generator hours",
+        on: on(values.operating_time_alerts),
+      },
+      {
+        rowId: "alert-load",
+        label: "Load",
+        on: on(values.load_alerts),
+      }
+    )
+  }
+  return summary
 }

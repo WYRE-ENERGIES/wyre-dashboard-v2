@@ -1,7 +1,10 @@
 import {
+  addDays,
   format,
+  isAfter,
   isWeekend,
   parseISO,
+  startOfDay,
   startOfYear,
   subDays,
   subMonths,
@@ -453,12 +456,60 @@ function periodicEmail(period: Period) {
   )
 }
 
+function breakdownSpan(start: Date, end: Date) {
+  const acc = { grid: 0, genKwh: 0, solar: 0, total: 0 }
+  const today = startOfDay(new Date())
+  const last = isAfter(end, today) ? today : end
+  for (let day = start; !isAfter(day, last); day = addDays(day, 1)) {
+    const dayTotal = breakdown({ kind: "day", anchor: day })
+    acc.grid += dayTotal.grid
+    acc.genKwh += dayTotal.genKwh
+    acc.solar += dayTotal.solar
+    acc.total += dayTotal.total
+  }
+  return acc
+}
+
+/** Periodic preview for the Monday–Sunday week the report page requests. */
+function periodicWeekEmail(start: Date, end: Date) {
+  const b = breakdownSpan(start, end)
+  const dieselRef = b.genKwh / OPTIMAL_KWH_PER_L
+  const body = [
+    section(
+      "Summary",
+      table(
+        ["", "Energy", "Estimated cost"],
+        [
+          ["Grid (utility)", kwh(b.grid), naira(b.grid * TARIFF)],
+          ["Generators", kwh(b.genKwh), naira(dieselRef * DIESEL_PRICE)],
+          ...(b.solar ? [["Solar", kwh(b.solar), naira(0)]] : []),
+          [
+            "<strong>Total</strong>",
+            `<strong>${kwh(b.total)}</strong>`,
+            `<strong>${naira(b.grid * TARIFF + dieselRef * DIESEL_PRICE)}</strong>`,
+          ],
+        ]
+      )
+    ),
+  ].join("")
+  return emailShell(
+    `Periodic energy report · ${currentBranch().name}`,
+    `${format(start, "d MMM yyyy")} – ${format(end, "d MMM yyyy")}`,
+    body,
+    end.getFullYear()
+  )
+}
+
 export function demoPreviewHtml(request: ReportRequest) {
   let html: string
-  // The UI only previews daily and periodic (a calendar year); monthly is rendered in-app.
+  // Monthly is rendered in-app. Daily and periodic previews follow the request
+  // dates; periodic is a week, not a calendar year.
   if (request.report_type === "daily") html = dailyEmail(parseISO(request.date))
   else if (request.report_type === "periodic")
-    html = periodicEmail({ kind: "year", anchor: parseISO(request.start_date) })
+    html = periodicWeekEmail(
+      parseISO(request.start_date),
+      parseISO(request.end_date)
+    )
   else html = periodicEmail(monthPeriod(request.month, request.year))
   return wait<PreviewReportResponse>({ html_email: html })
 }

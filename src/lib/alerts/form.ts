@@ -63,6 +63,30 @@ export const formatThreshold = ({
   value: number
 }) => `${operator === "gte" ? "≥" : "≤"} ${value}%`
 
+/** Live battery email: at most two status times, and one drop plus one rise. */
+export const MAX_SCHEDULE_TIMES = 2
+
+export const THRESHOLD_OPERATORS: Array<{ value: SocOperator; label: string }> =
+  [
+    { value: "lte", label: "Drops to / below (≤)" },
+    { value: "gte", label: "Rises to / above (≥)" },
+  ]
+
+/** First threshold of each direction (`limitThresholds`). */
+export function limitThresholds<
+  T extends { operator: SocOperator; value: number },
+>(thresholds: T[]) {
+  const seen = new Set<SocOperator>()
+  const next: T[] = []
+  for (const entry of thresholds) {
+    if (entry.operator !== "lte" && entry.operator !== "gte") continue
+    if (seen.has(entry.operator)) continue
+    seen.add(entry.operator)
+    next.push(entry)
+  }
+  return next
+}
+
 // ── Fields ───────────────────────────────────────────────────────────────
 
 /** On/off switches posted as booleans in `data`. */
@@ -239,11 +263,14 @@ export function toFormValues(
       push_enabled: Boolean(soc?.push_enabled),
       schedule_times: (soc?.schedule_times ?? [])
         .map((t) => ({ time: toTime(t.time), days: parseDays(t.days_of_week) }))
-        .sort((a, b) => a.time.localeCompare(b.time)),
-      thresholds: (soc?.thresholds ?? []).map((t) => ({
-        operator: t.operator,
-        value: Number(t.value),
-      })),
+        .sort((a, b) => a.time.localeCompare(b.time))
+        .slice(0, MAX_SCHEDULE_TIMES),
+      thresholds: limitThresholds(
+        (soc?.thresholds ?? []).map((t) => ({
+          operator: t.operator,
+          value: Number(t.value),
+        }))
+      ),
     },
   }
 }
@@ -278,18 +305,24 @@ export function toPayload(
   }
 
   if (response?.battery_soc_config) {
-    const { email_enabled, push_enabled, schedule_times, thresholds } =
-      values.soc
+    const { email_enabled, schedule_times, thresholds } = values.soc
     data.daily_battery_soc_alerts = email_enabled
     payload.battery_soc_config = {
-      is_enabled: email_enabled || push_enabled,
-      push_enabled,
+      is_enabled: email_enabled,
+      push_enabled: false,
       email_enabled,
-      schedule_times: schedule_times.map(({ time, days }) => {
-        const csv = daysToCsv(days)
-        return csv === DEFAULT_DAYS_CSV ? { time } : { time, days_of_week: csv }
-      }),
-      thresholds: thresholds.map(({ operator, value }) => ({
+      // Live page: every status time uses the operational days, push is not a
+      // separate switch, and the lists are capped at two times and one of
+      // each direction (composeAlertPayload / buildScheduleTimePayload).
+      schedule_times: schedule_times
+        .slice(0, MAX_SCHEDULE_TIMES)
+        .map(({ time }) => {
+          const csv = daysToCsv(values.daily_energy_usage_days)
+          return csv === DEFAULT_DAYS_CSV
+            ? { time }
+            : { time, days_of_week: csv }
+        }),
+      thresholds: limitThresholds(thresholds).map(({ operator, value }) => ({
         operator,
         value,
       })),

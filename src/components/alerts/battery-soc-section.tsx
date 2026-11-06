@@ -2,225 +2,222 @@
 
 import * as React from "react"
 import { useFormContext, useWatch } from "react-hook-form"
-import { PlusIcon, XIcon } from "lucide-react"
+import { ClockIcon, XIcon } from "lucide-react"
 
 import { Callout } from "@/components/alerts/fields"
-import { WeekdayPicker } from "@/components/alerts/weekday-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
-  ALL_DAYS,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import {
   formatThreshold,
   formatTime12h,
+  limitThresholds,
+  MAX_SCHEDULE_TIMES,
+  THRESHOLD_OPERATORS,
   type AlertsFormValues,
 } from "@/lib/alerts/form"
 import type { SocOperator } from "@/lib/api/alerts-types"
 
 /**
- * Battery state-of-charge alerts (production, 07 §3.1 rows 2–3): email and
- * push switches, scheduled status times with their own weekdays, and
- * "charge crosses" thresholds. Shown only when the GET returns
- * `battery_soc_config`.
+ * Battery level email, as on the live page: one switch, then scheduled
+ * status times and "charge crosses" thresholds. Shown only when the GET
+ * returns `battery_soc_config`. Times use the operational days.
  */
 export function BatterySocSection({ solarOnly }: { solarOnly: boolean }) {
   const { control, setValue } = useFormContext<AlertsFormValues>()
   const soc = useWatch({ control, name: "soc" })
+  const days = useWatch({ control, name: "daily_energy_usage_days" })
   const set = <K extends keyof AlertsFormValues["soc"]>(
     key: K,
     value: AlertsFormValues["soc"][K]
   ) => setValue(`soc.${key}`, value as never, { shouldDirty: true })
 
   return (
-    <div className="flex flex-col gap-4 py-4 first:pt-0 last:pb-0">
-      <SwitchLine
-        id="soc-email"
-        title="Send battery SOC alerts by email"
-        checked={soc.email_enabled}
-        onChange={(checked) => set("email_enabled", checked)}
-      />
-      <SwitchLine
-        id="soc-push"
-        title="Also notify the mobile app (push)"
-        checked={soc.push_enabled}
-        onChange={(checked) => set("push_enabled", checked)}
-        className="pl-4"
-      />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ScheduleTimes
-          value={soc.schedule_times}
-          onChange={(next) => set("schedule_times", next)}
-        />
-        <Thresholds
-          value={soc.thresholds}
-          onChange={(next) => set("thresholds", next)}
-        />
+    <>
+      <div
+        id="alert-battery"
+        className="flex scroll-mt-24 flex-col gap-4 py-4 first:pt-0 last:pb-0"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <label htmlFor="soc-email" className="text-sm font-medium">
+              Battery level email
+            </label>
+            <p className="text-sm text-muted-foreground">
+              Up to two times a day, plus one drop and one rise. Times use
+              15-minute steps.
+            </p>
+          </div>
+          <Switch
+            id="soc-email"
+            className="mt-0.5"
+            checked={soc.email_enabled}
+            onCheckedChange={(checked) => set("email_enabled", checked)}
+            aria-label="Send battery level alerts by email"
+          />
+        </div>
+        {soc.email_enabled && (
+          <div className="grid gap-3 lg:grid-cols-2">
+            <ScheduleTimes
+              value={soc.schedule_times}
+              days={days}
+              onChange={(next) => set("schedule_times", next)}
+            />
+            <Thresholds
+              value={soc.thresholds}
+              onChange={(next) => set("thresholds", next)}
+            />
+          </div>
+        )}
       </div>
       {solarOnly && (
-        <>
-          <Separator />
-          <div className="flex flex-col gap-2">
-            <div className="flex items-start justify-between gap-4">
+        <div
+          id="alert-night-usage"
+          className="flex scroll-mt-24 flex-col gap-2 py-4 first:pt-0 last:pb-0"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-col gap-1">
               <span className="text-sm font-medium">
                 Night battery over-usage
               </span>
-              <Badge
-                variant={soc.email_enabled ? "default" : "secondary"}
-                className="shrink-0"
-              >
-                {soc.email_enabled ? "On" : "Off"} · follows SOC email
-              </Badge>
+              <p className="text-sm text-muted-foreground">
+                Follows battery level email. When that email is on, Wyre can
+                alert you overnight (18:00–07:00 Lagos) if load is higher than
+                the battery can sustain until sunrise — at most once per night,
+                by email and push.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              When battery SOC email is on, Wyre can alert you overnight
-              (18:00–07:00 Lagos) if the load is higher than the battery can
-              sustain until sunrise — at most once a night, by email and push.
-            </p>
-            <Callout>
+            <Badge
+              variant={soc.email_enabled ? "default" : "secondary"}
+              className="shrink-0"
+            >
               {soc.email_enabled
-                ? "Night over-usage alerts are active while battery SOC email is on."
-                : "Turn on battery SOC email above to enable night over-usage alerts."}
-            </Callout>
+                ? "On with battery email"
+                : "Follows battery email"}
+            </Badge>
           </div>
-        </>
+          <Callout>
+            {soc.email_enabled
+              ? "Night over-usage alerts are active while battery level email is enabled."
+              : "Turn on battery level email above to enable night over-usage alerts."}
+          </Callout>
+        </div>
       )}
-    </div>
-  )
-}
-
-function SwitchLine({
-  id,
-  title,
-  checked,
-  onChange,
-  className,
-}: {
-  id: string
-  title: string
-  checked: boolean
-  onChange: (checked: boolean) => void
-  className?: string
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 ${className ?? ""}`}
-    >
-      <label htmlFor={id} className="text-sm font-medium">
-        {title}
-      </label>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={(value) => onChange(value)}
-      />
-    </div>
+    </>
   )
 }
 
 type ScheduleTime = AlertsFormValues["soc"]["schedule_times"][number]
 
+const QUARTER_HOURS = Array.from({ length: 24 * 4 }, (_, index) => {
+  const hours = Math.floor(index / 4)
+  const minutes = (index % 4) * 15
+  const value = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
+  return { value, label: formatTime12h(value) }
+})
+
 function ScheduleTimes({
   value,
+  days,
   onChange,
 }: {
   value: ScheduleTime[]
+  days: number[]
   onChange: (next: ScheduleTime[]) => void
 }) {
-  const [time, setTime] = React.useState("")
-  const [days, setDays] = React.useState<number[]>(ALL_DAYS)
+  const [time, setTime] = React.useState<string | null>(null)
   const [error, setError] = React.useState("")
 
-  // Rules from handleAddScheduleTime (AlertsAndAlarms.js:241-259), plus the
-  // 15-minute step the old TimePicker enforced.
   const add = () => {
+    if (value.length >= MAX_SCHEDULE_TIMES) {
+      return setError("You can add up to two times.")
+    }
     if (!time) return setError("Select a time to add.")
-    if (Number(time.slice(3, 5)) % 15 !== 0)
-      return setError("Pick a time on the quarter hour (:00, :15, :30, :45).")
-    if (value.some((entry) => entry.time === time))
+    if (value.some((entry) => entry.time === time)) {
       return setError("This time is already scheduled.")
+    }
     onChange(
       [...value, { time, days }].sort((a, b) => a.time.localeCompare(b.time))
     )
-    setTime("")
-    setDays(ALL_DAYS)
+    setTime(null)
     setError("")
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-brand/15 bg-brand/5 p-4">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Scheduled updates</span>
-        <p className="text-xs text-muted-foreground">
-          A status message at each time (Africa/Lagos), on the days you pick.
-          15-minute steps.
+        <p className="text-sm font-semibold text-brand">Scheduled updates</p>
+        <p className="text-sm text-muted-foreground">
+          Send a status at each time (Africa/Lagos), on your operational days.
+          You can add up to two times. Granularity is 15 minutes.
         </p>
       </div>
-      {value.length ? (
-        <ul className="flex flex-col gap-3">
-          {value.map((entry) => (
-            <li key={entry.time} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="tabular-nums">
-                  {formatTime12h(entry.time)}
-                </Badge>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Remove ${formatTime12h(entry.time)}`}
-                  onClick={() =>
-                    onChange(value.filter((e) => e.time !== entry.time))
-                  }
-                >
-                  <XIcon />
-                </Button>
-              </div>
-              <WeekdayPicker
-                label={`Weekdays for ${formatTime12h(entry.time)}`}
-                value={entry.days}
-                onChange={(next) =>
-                  onChange(
-                    value.map((e) =>
-                      e.time === entry.time ? { ...e, days: next } : e
-                    )
-                  )
+      <div className="flex min-h-8 flex-wrap gap-2">
+        {value.length ? (
+          value.map((entry) => (
+            <span
+              key={entry.time}
+              className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-background px-3 py-1.5 text-sm font-semibold text-brand"
+            >
+              {formatTime12h(entry.time)}
+              <button
+                type="button"
+                aria-label={`Remove ${formatTime12h(entry.time)}`}
+                className="rounded-full p-0.5 text-brand/80 hover:bg-brand/10 hover:text-brand"
+                onClick={() =>
+                  onChange(value.filter((item) => item.time !== entry.time))
                 }
-              />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">No times scheduled yet.</p>
-      )}
-      <Separator />
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <Input
-            type="time"
-            step={900}
-            aria-label="New scheduled time"
-            className="w-32"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </span>
+          ))
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            No times configured yet.
+          </span>
+        )}
+      </div>
+      {value.length < MAX_SCHEDULE_TIMES ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            items={QUARTER_HOURS}
             value={time}
-            onChange={(e) => {
-              setTime(e.target.value)
+            onValueChange={(next) => {
+              setTime(next)
               setError("")
             }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={add}>
-            <PlusIcon />
+          >
+            <SelectTrigger aria-label="Select time" className="min-w-36">
+              <ClockIcon className="size-4 text-muted-foreground" />
+              <SelectValue placeholder="Select time" />
+            </SelectTrigger>
+            <SelectContent>
+              {QUARTER_HOURS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button type="button" onClick={add}>
             Add time
           </Button>
         </div>
-        <WeekdayPicker
-          label="Weekdays for the new time"
-          value={days}
-          onChange={setDays}
-        />
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Two times is the maximum.
+        </p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }
@@ -238,102 +235,131 @@ function Thresholds({
   const [percent, setPercent] = React.useState("")
   const [error, setError] = React.useState("")
 
-  // handleAddThreshold (AlertsAndAlarms.js:274-295).
+  const available = THRESHOLD_OPERATORS.filter(
+    (option) => !value.some((entry) => entry.operator === option.value)
+  )
+  const selected = available.some((option) => option.value === operator)
+    ? operator
+    : available[0]?.value
+
   const add = () => {
     const text = percent.trim()
-    if (!text) return setError("Enter a SOC percentage.")
+    if (!text) return setError("Enter a battery level percentage.")
     const n = Number(text)
-    if (!Number.isFinite(n) || n < 0 || n > 100)
+    if (!Number.isFinite(n) || n < 0 || n > 100) {
       return setError("Enter a percentage from 0 to 100.")
-    if (value.some((t) => t.operator === operator && t.value === n)) {
-      return setError("This threshold is already configured.")
     }
-    onChange([...value, { operator, value: n }])
+    if (!selected) return setError("One drop and one rise is the maximum.")
+    onChange(limitThresholds([...value, { operator: selected, value: n }]))
     setPercent("")
+    const remaining = THRESHOLD_OPERATORS.find(
+      (option) => option.value !== selected
+    )
+    if (
+      remaining &&
+      !value.some((entry) => entry.operator === remaining.value)
+    ) {
+      setOperator(remaining.value)
+    }
     setError("")
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-brand/15 bg-brand/5 p-4">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">When battery charge crosses</span>
-        <p className="text-xs text-muted-foreground">
-          One alert when SOC reaches a level, e.g. drops to 30% or rises to 80%.
-          It won&apos;t repeat until SOC recovers by about 3%.
+        <p className="text-sm font-semibold text-brand">
+          When battery charge crosses
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Alert once when the battery reaches a level you set — one drop and one
+          rise, for example drops to 30% or rises to 80%. It will not repeat
+          until the battery level recovers by about 3%.
         </p>
       </div>
-      {value.length ? (
-        <ul className="flex flex-wrap gap-2">
-          {value.map((t, index) => (
-            <li key={`${t.operator}-${t.value}`}>
-              <Badge variant="outline" className="gap-1 pr-1 tabular-nums">
-                {formatThreshold(t)}
-                <button
-                  type="button"
-                  aria-label={`Remove ${formatThreshold(t)}`}
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  onClick={() => onChange(value.filter((_, i) => i !== index))}
-                >
-                  <XIcon className="size-3" />
-                </button>
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">No thresholds yet.</p>
-      )}
-      <Separator />
-      <div className="flex flex-col gap-2">
-        <ToggleGroup
-          variant="outline"
-          size="sm"
-          spacing={1}
-          aria-label="Direction"
-          value={[operator]}
-          onValueChange={(next) =>
-            next[0] && setOperator(next[0] as SocOperator)
-          }
-        >
-          <ToggleGroupItem
-            value="lte"
-            className="data-pressed:border-brand data-pressed:bg-brand/10"
+      <div className="flex min-h-8 flex-wrap gap-2">
+        {value.length ? (
+          value.map((entry) => (
+            <span
+              key={`${entry.operator}-${entry.value}`}
+              className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-background px-3 py-1.5 text-sm font-semibold text-brand tabular-nums"
+            >
+              {formatThreshold(entry)}
+              <button
+                type="button"
+                aria-label={`Remove ${formatThreshold(entry)}`}
+                className="rounded-full p-0.5 text-brand/80 hover:bg-brand/10 hover:text-brand"
+                onClick={() =>
+                  onChange(
+                    value.filter(
+                      (item) =>
+                        item.operator !== entry.operator ||
+                        item.value !== entry.value
+                    )
+                  )
+                }
+              >
+                <XIcon className="size-3" />
+              </button>
+            </span>
+          ))
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            No thresholds configured yet.
+          </span>
+        )}
+      </div>
+      {available.length > 0 && selected ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            items={available}
+            value={selected}
+            onValueChange={(next) => {
+              if (next) setOperator(next)
+              setError("")
+            }}
           >
-            Drops to or below (≤)
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="gte"
-            className="data-pressed:border-brand data-pressed:bg-brand/10"
-          >
-            Rises to or above (≥)
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <div className="flex items-center gap-2">
+            <SelectTrigger
+              aria-label="Battery level direction"
+              className="min-w-56"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             inputMode="decimal"
             placeholder="30"
-            aria-label="SOC threshold percentage"
-            className="w-24 tabular-nums"
+            aria-label="Battery level percentage"
+            className="w-20 tabular-nums"
             value={percent}
-            onChange={(e) => {
-              setPercent(e.target.value)
+            onChange={(event) => {
+              setPercent(event.target.value)
               setError("")
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
                 add()
               }
             }}
           />
           <span className="text-sm text-muted-foreground">%</span>
-          <Button type="button" variant="outline" size="sm" onClick={add}>
-            <PlusIcon />
+          <Button type="button" onClick={add}>
             Add threshold
           </Button>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          One drop and one rise is the maximum.
+        </p>
+      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }
