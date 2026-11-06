@@ -3,8 +3,6 @@ import type {
   ScoreCardMetric,
   ScoreCardResponse,
 } from "@/lib/api/score-card-types"
-import { DEMO } from "@/lib/demo"
-import { demoScoreCard } from "@/lib/demo-data/score-card"
 import { endpointRange, type Period } from "@/lib/period"
 
 /**
@@ -20,9 +18,7 @@ export const getScoreCard = (
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoScoreCard(metric, period)
-    : apiRequest<ScoreCardResponse>(
-        `scorecard/${metric}/${branchId}/${endpointRange(period)}/`,
-        { signal }
-      )
+  apiRequest<ScoreCardResponse>(
+    `scorecard/${metric}/${branchId}/${endpointRange(period)}/`,
+    { signal }
+  )

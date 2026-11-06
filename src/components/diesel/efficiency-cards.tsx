@@ -34,6 +34,7 @@ import {
   specificFuelConsumption,
 } from "@/lib/diesel/metrics"
 import { formatNaira, formatNumber } from "@/lib/format"
+import { isDayView } from "@/lib/period"
 import { cn } from "@/lib/utils"
 
 /** Old OperationalEfficiencyCard.js. */
@@ -51,8 +52,7 @@ export function OperationalEfficiencyCard({ data }: { data: DieselData }) {
         <CardAction>
           <InfoHint>
             How well the generators turn diesel into energy, and the power they
-            were asked to supply.{" "}
-            {data.period.kind === "day" && MONTH_ONLY_HINT}
+            were asked to supply. {isDayView(data.period) && MONTH_ONLY_HINT}
             {isYear &&
               " For a year, demand max and min are the extremes across months; the other figures are monthly averages."}{" "}
             {BRANCH_WIDE_HINT}
@@ -165,7 +165,7 @@ export function CostAnalysisCard({ data }: { data: DieselData }) {
           <InfoHint>
             Diesel spend for the period, what a generator kWh cost, and the
             yearly cost at the current rate.{" "}
-            {data.period.kind === "day" && MONTH_ONLY_HINT}
+            {isDayView(data.period) && MONTH_ONLY_HINT}
             {isYear &&
               " For a year, cost per kWh is the average across months and the forecast is the latest month's."}{" "}
             {BRANCH_WIDE_HINT}

@@ -8,6 +8,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   XAxis,
   YAxis,
 } from "recharts"
@@ -33,7 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { formatNumber } from "@/lib/format"
-import { periodLabel } from "@/lib/period"
+import { GRANULARITY, periodLabel } from "@/lib/period"
 import { bucketLabel } from "@/lib/solar/metrics"
 
 /**
@@ -47,15 +49,12 @@ type Series = { key: string; label: string; color: string }
 
 function grainOf(data: SolarData) {
   const isDay = data.period.kind === "day"
+  const daily = GRANULARITY[data.period.kind] === "daily"
   return {
     isDay,
     unit: isDay ? "kW" : "kWh",
-    grain: isDay
-      ? "Hourly"
-      : data.period.kind === "month"
-        ? "Daily"
-        : "Monthly",
-    description: `${isDay ? "Hourly, kW" : data.period.kind === "month" ? "Daily, kWh" : "Monthly, kWh"} · ${periodLabel(data.period)}`,
+    grain: isDay ? "Hourly" : daily ? "Daily" : "Monthly",
+    description: `${isDay ? "Hourly, kW" : daily ? "Daily, kWh" : "Monthly, kWh"} · ${periodLabel(data.period)}`,
   }
 }
 
@@ -119,21 +118,29 @@ function ChartBody({
 }
 
 /** Area chart for hourly kW, bars for daily/monthly kWh. */
+/** A percentage series drawn as a line on its own 0–100 % right axis. */
+type PercentLine = Series
+
 function SeriesChart({
   rows,
   series,
   unit,
   asArea,
   extraTooltip,
+  percentLine,
 }: {
   rows: Array<Record<string, unknown>>
   series: Series[]
   unit: string
   asArea: boolean
   extraTooltip?: (row: Record<string, unknown>) => React.ReactNode
+  percentLine?: PercentLine
 }) {
   const config: ChartConfig = Object.fromEntries(
-    series.map((s) => [s.key, { label: s.label, color: s.color }])
+    [...series, ...(percentLine ? [percentLine] : [])].map((s) => [
+      s.key,
+      { label: s.label, color: s.color },
+    ])
   )
   const tooltip = (
     <ChartTooltip
@@ -160,7 +167,9 @@ function SeriesChart({
                 {config[String(name)]?.label ?? name}
               </span>
               <span className="font-mono text-foreground tabular-nums">
-                {formatNumber(Number(value), unit === "kW" ? 2 : 1)} {unit}
+                {name === percentLine?.key
+                  ? `${formatNumber(Number(value), 1)}%`
+                  : `${formatNumber(Number(value), unit === "kW" ? 2 : 1)} ${unit}`}
               </span>
             </div>
           )}
@@ -179,6 +188,7 @@ function SeriesChart({
         minTickGap={12}
       />
       <YAxis
+        yAxisId="value"
         tickLine={false}
         axisLine={false}
         width={44}
@@ -186,6 +196,64 @@ function SeriesChart({
       />
     </>
   )
+  if (percentLine) {
+    return (
+      <ChartContainer config={config} className="aspect-auto h-64 w-full">
+        <ComposedChart
+          data={rows}
+          margin={{ left: 4, right: 4, top: 8 }}
+          barCategoryGap="20%"
+        >
+          {axes}
+          <YAxis
+            yAxisId="percent"
+            orientation="right"
+            domain={[0, 100]}
+            ticks={[0, 25, 50, 75, 100]}
+            tickLine={false}
+            axisLine={false}
+            width={40}
+            tickFormatter={(v: number) => `${v}%`}
+          />
+          {tooltip}
+          <ChartLegend content={<ChartLegendContent />} />
+          {series.map((s) =>
+            asArea ? (
+              <Area
+                key={s.key}
+                yAxisId="value"
+                dataKey={s.key}
+                type="monotone"
+                stroke={`var(--color-${s.key})`}
+                fill={`var(--color-${s.key})`}
+                fillOpacity={0.25}
+                strokeWidth={2}
+              />
+            ) : (
+              <Bar
+                key={s.key}
+                yAxisId="value"
+                dataKey={s.key}
+                fill={`var(--color-${s.key})`}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={28}
+              />
+            )
+          )}
+          <Line
+            yAxisId="percent"
+            dataKey={percentLine.key}
+            type="monotone"
+            stroke={`var(--color-${percentLine.key})`}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 4 }}
+            connectNulls
+          />
+        </ComposedChart>
+      </ChartContainer>
+    )
+  }
   return (
     <ChartContainer config={config} className="aspect-auto h-64 w-full">
       {asArea ? (
@@ -196,6 +264,7 @@ function SeriesChart({
           {series.map((s) => (
             <Area
               key={s.key}
+              yAxisId="value"
               dataKey={s.key}
               type="monotone"
               stroke={`var(--color-${s.key})`}
@@ -217,6 +286,7 @@ function SeriesChart({
           {series.map((s) => (
             <Bar
               key={s.key}
+              yAxisId="value"
               dataKey={s.key}
               fill={`var(--color-${s.key})`}
               radius={[3, 3, 0, 0]}
@@ -368,7 +438,7 @@ export function PvProductionChart({ data }: { data: SolarData }) {
         },
         peakBucket && peakBucket.productionKwh > 0
           ? {
-              label: data.period.kind === "month" ? "Best day" : "Best month",
+              label: data.period.kind === "year" ? "Best month" : "Best day",
               value: `${formatNumber(peakBucket.productionKwh, 1)} kWh`,
               sub: bucketLabel(peakBucket.key),
             }
@@ -414,7 +484,11 @@ export function BatteryChart({ data }: { data: SolarData }) {
         ...r,
         charge: r.chargeKwh,
         discharge: r.dischargeKwh,
+        soc: data.dailySoc.data?.get(r.key) ?? null,
       }))
+  // Hourly SOC for a day, the daily average for a month or range; a year
+  // has no SOC data.
+  const hasSoc = rows.some((r) => typeof r.soc === "number")
   const totalCharge = g.isDay
     ? (data.battery.data?.totalCharge ?? null)
     : data.rows.reduce((a, r) => a + r.chargeKwh, 0)
@@ -430,7 +504,12 @@ export function BatteryChart({ data }: { data: SolarData }) {
         <CardAction>
           <InfoHint>
             Energy going into the battery (charge) and out of it (discharge).
-            {g.isDay && " Hover an hour to see the battery's state of charge."}
+            The line is the battery&apos;s state of charge (right axis):
+            {g.isDay
+              ? " hourly."
+              : data.period.kind === "year"
+                ? " not available for a whole year; pick a month or days."
+                : " each day's average."}
           </InfoHint>
         </CardAction>
       </CardHeader>
@@ -462,12 +541,14 @@ export function BatteryChart({ data }: { data: SolarData }) {
             ]}
             unit={g.unit}
             asArea={g.isDay}
-            extraTooltip={(row) =>
-              typeof row.soc === "number" ? (
-                <span className="font-normal text-muted-foreground">
-                  State of charge {formatNumber(row.soc, 1)}%
-                </span>
-              ) : null
+            percentLine={
+              hasSoc
+                ? {
+                    key: "soc",
+                    label: g.isDay ? "State of charge" : "Avg. state of charge",
+                    color: "var(--destructive)",
+                  }
+                : undefined
             }
           />
         </ChartBody>

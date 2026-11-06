@@ -6,7 +6,7 @@ import { Controller, useFormContext, type FieldPath } from "react-hook-form"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import type { AlertsFormValues } from "@/lib/alerts/form"
+import type { AlertsFormValues, SwitchName } from "@/lib/alerts/form"
 import { cn } from "@/lib/utils"
 
 type BooleanField = {
@@ -17,6 +17,11 @@ type TextField = {
   [K in keyof AlertsFormValues]: AlertsFormValues[K] extends string ? K : never
 }[keyof AlertsFormValues]
 
+/** Saves one switch as soon as it is flipped (see AlertsForm). */
+export const SwitchSaveContext = React.createContext<
+  ((name: SwitchName, checked: boolean) => void) | null
+>(null)
+
 /** One alert: title and explanation on the left, its on/off switch on the
  * right, threshold inputs (children) underneath. */
 export function AlertRow({
@@ -25,6 +30,7 @@ export function AlertRow({
   description,
   children,
   badge,
+  rowId,
 }: {
   /** The switch's field; omit for info-only rows. */
   name?: BooleanField
@@ -33,11 +39,17 @@ export function AlertRow({
   children?: React.ReactNode
   /** Shown instead of a switch on info-only rows. */
   badge?: string
+  /** Anchor for the toolbar chips that scroll to this row. */
+  rowId?: string
 }) {
   const id = React.useId()
   const { control } = useFormContext<AlertsFormValues>()
+  const saveSwitch = React.useContext(SwitchSaveContext)
   return (
-    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+    <div
+      id={rowId}
+      className="flex scroll-mt-24 flex-col gap-3 py-4 first:pt-0 last:pb-0"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <label
@@ -59,7 +71,10 @@ export function AlertRow({
                 id={id}
                 className="mt-0.5"
                 checked={field.value}
-                onCheckedChange={(checked) => field.onChange(checked)}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked)
+                  saveSwitch?.(name, checked)
+                }}
                 onBlur={field.onBlur}
               />
             )}

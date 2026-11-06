@@ -12,7 +12,6 @@ import {
   type SessionTokens,
   type UserClaims,
 } from "@/lib/auth/session"
-import { DEMO, demoClaimsFor } from "@/lib/demo"
 
 type SessionContextValue = {
   /** `undefined` until the browser session has been read. */
@@ -46,13 +45,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const claims = React.useMemo(
     () =>
-      access === undefined
-        ? undefined
-        : DEMO
-          ? demoClaimsFor(access)
-          : access
-            ? decodeClaims(access)
-            : null,
+      access === undefined ? undefined : access ? decodeClaims(access) : null,
     [access]
   )
 

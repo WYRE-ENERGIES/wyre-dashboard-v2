@@ -30,6 +30,11 @@ export type GeneratorSizeEfficiency = {
   usage?: Num
   unit?: string
   is_gen?: boolean
+  /** Rated size in kVA; 0 when none is on record (live payload). */
+  gen_size?: Num
+  /** Peak and average load over the period, kVA (live payload). */
+  max_load?: Num
+  avg_load?: Num
 }
 
 export type FuelConsumption = {

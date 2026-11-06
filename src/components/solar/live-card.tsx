@@ -59,7 +59,7 @@ export function SegmentGauge({
               y1={inner * Math.sin(angle)}
               x2={outer * Math.cos(angle)}
               y2={outer * Math.sin(angle)}
-              stroke={on ? "var(--primary)" : "var(--border)"}
+              stroke={on ? "var(--chart-1)" : "var(--border)"}
               strokeWidth={on ? 6 : 4}
               strokeLinecap="round"
             />
@@ -149,7 +149,7 @@ export function LiveCard({
           </InfoHint>
         </CardAction>
       </CardHeader>
-      <CardContent>
+      <CardContent className="@container flex flex-1 flex-col">
         {live.isPending ? (
           <div className="flex items-center gap-6">
             <Skeleton className="size-40 rounded-full" />
@@ -161,9 +161,10 @@ export function LiveCard({
         ) : live.isError || !l ? (
           <CardError onRetry={() => live.refetch()} />
         ) : (
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
-            <SegmentGauge percent={l.pv.percent} />
-            <dl className="grid w-full grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-1">
+          // Gauge and readings spread across the card and centred in it.
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row sm:justify-evenly">
+            <SegmentGauge percent={l.pv.percent} size={176} />
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-1 @xl:grid-cols-2">
               <LiveStat
                 label="PV production"
                 value={formatNumber(l.pv.kw, 3)}
@@ -180,7 +181,7 @@ export function LiveCard({
                 <LiveStat
                   label="Battery charge"
                   value={`${formatNumber(l.battery.percent, 0)}%`}
-                  dot="bg-chart-2"
+                  dot="bg-success"
                 />
               )}
               {capacityKwh != null && (
@@ -191,14 +192,14 @@ export function LiveCard({
                     Number.isInteger(capacityKwh) ? 0 : 1
                   )}
                   unit="kWh"
-                  dot="bg-chart-3"
+                  dot="bg-success/50"
                 />
               )}
             </dl>
           </div>
         )}
         {live.dataUpdatedAt > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs text-muted-foreground">
             Updated {format(live.dataUpdatedAt, "HH:mm")}
           </p>
         )}

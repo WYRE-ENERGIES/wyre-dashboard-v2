@@ -1,4 +1,4 @@
-import { format, isAfter, startOfMonth } from "date-fns"
+import { eachMonthOfInterval, format, isAfter, startOfMonth } from "date-fns"
 
 import type {
   CostMetrics,
@@ -11,7 +11,13 @@ import type {
   MonthYear,
 } from "@/lib/api/diesel-types"
 import type { DeviceBase } from "@/lib/api/types"
-import { isoDate, periodStart, type Period } from "@/lib/period"
+import {
+  isDayView,
+  isoDate,
+  periodEnd,
+  periodStart,
+  type Period,
+} from "@/lib/period"
 
 /**
  * Diesel Overview business rules. The endpoints only take `?month=&year=`
@@ -19,6 +25,8 @@ import { isoDate, periodStart, type Period } from "@/lib/period"
  *
  * - Day   → the day's month; daily series are filtered to that day, and
  *           month-only aggregates are labelled as the whole month.
+ * - Range → the one or two months it touches, the same way: daily series
+ *           are filtered to the range, aggregates cover whole months.
  * - Month → that month.
  * - Year  → every month of the year up to now, fetched separately and
  *           aggregated client-side (endpoint-update proposal E2: accept a
@@ -28,6 +36,12 @@ import { isoDate, periodStart, type Period } from "@/lib/period"
 /** The months a period needs, oldest first. Never includes a future month. */
 export function monthsOfPeriod(period: Period, now = new Date()): MonthYear[] {
   const start = periodStart(period)
+  if (period.kind === "range") {
+    // A range touches one or two months.
+    return eachMonthOfInterval({ start, end: periodEnd(period, now) }).map(
+      (d) => ({ month: d.getMonth() + 1, year: d.getFullYear() })
+    )
+  }
   if (period.kind !== "year")
     return [{ month: start.getMonth() + 1, year: start.getFullYear() }]
   const out: MonthYear[] = []
@@ -39,8 +53,19 @@ export function monthsOfPeriod(period: Period, now = new Date()): MonthYear[] {
   return out
 }
 
-/** Whether a card that can only show whole months should say so. */
-export const isMonthScopedOnDay = (period: Period) => period.kind === "day"
+/** Whether a card that can only show whole months should say so (a day or
+ * a range of days shows the month(s) it falls in). */
+export const isMonthScopedOnDay = (period: Period) => isDayView(period)
+
+/** Keep only the points dated inside a day or range. */
+const insidePeriod = <P extends { date: string }>(
+  period: Period,
+  points: P[]
+) => {
+  const start = isoDate(periodStart(period))
+  const end = isoDate(periodEnd(period))
+  return points.filter((p) => p.date >= start && p.date <= end)
+}
 
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
 const nonZero = (values: number[]) => values.filter((v) => v !== 0)
@@ -101,15 +126,12 @@ export function shapeGeneratorSeries(
     )
     return mergeSeries(monthly)
   }
-  const gens = months[0] ?? []
-  if (period.kind === "day") {
-    const day = isoDate(period.anchor)
-    return gens.map((g) => ({
-      ...g,
-      points: g.points.filter((p) => p.date === day),
-    }))
-  }
-  return gens
+  // The API returns a day past the end (and future days of the current
+  // month); keep only days inside the period.
+  return mergeSeries(months).map((g) => ({
+    ...g,
+    points: insidePeriod(period, g.points),
+  }))
 }
 
 /** `yyyy-MM-01`: the date a monthly bucket is plotted at. */
@@ -142,10 +164,7 @@ export function shapeFuelUsage(
       emsLitres: sum(points.map((p) => p.emsLitres)),
     }))
   }
-  const points = months[0] ?? []
-  if (period.kind === "day")
-    return points.filter((p) => p.date === isoDate(period.anchor))
-  return points
+  return insidePeriod(period, months.flat())
 }
 
 /**

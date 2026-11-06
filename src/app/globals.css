@@ -27,6 +27,11 @@
   --highlight: oklch(0.884 0.162 94);
   --highlight-foreground: oklch(0.3 0.06 80);
   --destructive: oklch(0.577 0.245 27.325);
+  /* Deeper amber beside the brand yellow: outlines and text on yellow. */
+  --amber: oklch(0.72 0.16 62);
+  /* Green for healthy / running states (battery, generator ON). */
+  --success: oklch(0.6 0.16 150);
+  --success-foreground: oklch(0.985 0 0);
   --border: oklch(0.92 0.004 298);
   --input: oklch(0.92 0.004 298);
   --ring: oklch(0.58 0.17 298);
@@ -68,6 +73,9 @@
   --highlight: oklch(0.884 0.162 94);
   --highlight-foreground: oklch(0.3 0.06 80);
   --destructive: oklch(0.704 0.191 22.216);
+  --amber: oklch(0.8 0.15 72);
+  --success: oklch(0.72 0.17 150);
+  --success-foreground: oklch(0.2 0.03 150);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.6 0.16 298);
@@ -110,6 +118,9 @@
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
   --color-destructive: var(--destructive);
+  --color-amber: var(--amber);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -143,6 +154,60 @@
   html {
     @apply font-sans;
   }
+}
+
+/* Solar power-flow hub (the inverter). Light: solid yellow with amber line
+   work, as on the old dashboard. Dark: a yellow-tinted disc with yellow line
+   work, like the other nodes, so it doesn't turn muddy. */
+:root {
+  --hub-fill: color-mix(in oklch, var(--highlight) 75%, var(--card));
+  --hub-line: var(--amber);
+  --hub-slot: var(--card);
+}
+.dark {
+  --hub-fill: color-mix(in oklch, var(--highlight) 16%, var(--card));
+  --hub-line: var(--highlight);
+  --hub-slot: var(--highlight);
+}
+
+/* "Current dashboard" power flow (the old diagram, solar-view): its light
+   colours as on the old dashboard, and a dark variant with brighter strokes
+   on tinted discs. */
+.legacy-flow {
+  --lf-production: #f59e0b;
+  --lf-production-bg: #fde68a;
+  --lf-capacity: #6d28d9;
+  --lf-capacity-bg: #f3e8ff;
+  --lf-generator: #c2410c;
+  --lf-generator-bg: #ffedd5;
+  --lf-battery: #16a34a;
+  --lf-battery-bg: #dcfce7;
+  --lf-grid: #2563eb;
+  --lf-grid-bg: #dbeafe;
+  --lf-usage: #dc2626;
+  --lf-usage-bg: #fee2e2;
+  --lf-line: #ddd;
+  --lf-label: #111827;
+  --lf-value: #6b7280;
+  --lf-caption: #555;
+}
+.dark .legacy-flow {
+  --lf-production: #fbbf24;
+  --lf-production-bg: color-mix(in oklch, #fbbf24 22%, var(--card));
+  --lf-capacity: #a78bfa;
+  --lf-capacity-bg: color-mix(in oklch, #a78bfa 18%, var(--card));
+  --lf-generator: #fb923c;
+  --lf-generator-bg: color-mix(in oklch, #fb923c 18%, var(--card));
+  --lf-battery: #4ade80;
+  --lf-battery-bg: color-mix(in oklch, #4ade80 16%, var(--card));
+  --lf-grid: #60a5fa;
+  --lf-grid-bg: color-mix(in oklch, #60a5fa 18%, var(--card));
+  --lf-usage: #f87171;
+  --lf-usage-bg: color-mix(in oklch, #f87171 18%, var(--card));
+  --lf-line: oklch(1 0 0 / 45%);
+  --lf-label: var(--foreground);
+  --lf-value: var(--muted-foreground);
+  --lf-caption: var(--muted-foreground);
 }
 
 /* Pages whose controls (switches, toggles, buttons) use the brand purple in
