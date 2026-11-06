@@ -1,34 +1,16 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { format } from "date-fns"
-import {
-  ChartBarBigIcon,
-  ChartColumnIcon,
-  GaugeIcon,
-  HistoryIcon,
-  PlugZapIcon,
-  ReceiptIcon,
-} from "lucide-react"
+import { useMemo } from "react"
+import { useQueries, useQuery } from "@tanstack/react-query"
+import { format, getDaysInMonth, parseISO } from "date-fns"
 
-import { EnergyChartBody } from "@/components/dashboard/energy-chart"
-import { useDashboardData } from "@/components/dashboard/use-dashboard-data"
 import { WholeBranchFilters } from "@/components/filters-provider"
 import {
-  SourceDonut,
-  SourceLegend,
-  TopContributorsChart,
-} from "@/components/report/monthly-charts"
-import {
-  ReportCard,
-  ReportDocument,
-  SectionHeading,
-  TotalEnergyCard,
-  useBranchName,
-} from "@/components/report/report-parts"
+  EmailNote,
+  EmailReport,
+  EmailSection,
+} from "@/components/report/email-report"
 import { useClaims } from "@/components/session-provider"
-import { CardError, Stat } from "@/components/shared/card-parts"
-import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -39,375 +21,649 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getDeviceUsage } from "@/lib/api/endpoints"
+import { getDeviceUsage, getTotalEnergy } from "@/lib/api/endpoints"
 import type { ReportRequest } from "@/lib/api/report-types"
-import { seriesColors } from "@/lib/dashboard/colors"
+import type { DeviceUsageResponse } from "@/lib/api/types"
+import { sourceUsage, totalEnergy } from "@/lib/dashboard/metrics"
+import { formatNaira, formatNumber, formatPercent } from "@/lib/format"
+import { isoDate, serializePeriod, type Period } from "@/lib/period"
 import {
-  demandSummary,
-  sourceUsage,
-  totalEnergy,
-  type SourceUsage,
-} from "@/lib/dashboard/metrics"
-import { formatDeviceName, formatNaira, formatNumber } from "@/lib/format"
+  avoidedCost,
+  breakdownRows,
+  gridRate,
+  projectedSavings,
+  type GroupedSource,
+  type SourceGroupId,
+} from "@/lib/report/period-content"
 import {
-  GRANULARITY,
-  periodEnd,
-  periodLabel,
-  periodStart,
-  serializePeriod,
-  shiftPeriod,
-  type Period,
-} from "@/lib/period"
-import type { Source } from "@/lib/report/monthly"
-
+  daysInRange,
+  elapsedDays,
+  previousPeriodicWeek,
+  weekSentence,
+  weekShort,
+  type ReportWeek,
+} from "@/lib/report/week"
 const ALL: number[] = []
 
+const SOURCE_COLOR: Record<SourceGroupId, string> = {
+  generator: "#e15b4a",
+  solar: "#3cba6e",
+  grid: "#3ec0dc",
+  ipp: "#8b7fd6",
+}
+
 type PeriodRequest = Exclude<ReportRequest, { report_type: "monthly" }>
-type Data = ReturnType<typeof useDashboardData>
+type DayQuery<T> = {
+  data: T | undefined
+  isPending: boolean
+  isError: boolean
+  refetch: () => unknown
+}
 
 /**
- * Daily and Periodic reports, in the same document layout as the Monthly
- * report (the old dashboard's report page), built from the dashboard
- * endpoints for the whole branch over the report's period (the global one).
+ * Daily and periodic reports, on the email paper. Periodic uses the start
+ * and end dates on the request, whichever range was entered.
  */
 export function PeriodReport({ request }: { request: PeriodRequest }) {
   return (
     <WholeBranchFilters>
-      <PeriodReportBody request={request} />
+      {request.report_type === "daily" ? (
+        <DailyEmail date={parseISO(request.date)} />
+      ) : (
+        <PeriodicEmail
+          start={parseISO(request.start_date)}
+          end={parseISO(request.end_date)}
+        />
+      )}
     </WholeBranchFilters>
   )
 }
 
-function PeriodReportBody({ request }: { request: PeriodRequest }) {
-  const data = useDashboardData()
-  const { period } = data
-  const branchName = useBranchName()
-  const daily = request.report_type === "daily"
-  const sources = toSources(sourceUsage(data.deviceUsage.data, ALL))
-  const sourcesTotal = sources.reduce((sum, s) => sum + s.kwh, 0)
-  const energy = totalEnergy(data.totalEnergy.data, ALL)
+function DailyEmail({ date }: { date: Date }) {
+  const claims = useClaims()
+  const usage = useDayUsage(date)
+  const month: Period = { kind: "month", anchor: date }
+  const monthUsage = useDayQuery(month, getDeviceUsage)
+  const rows = breakdownRows(sourceUsage(usage.data, ALL))
+  const total = rows.reduce((sum, row) => sum + row.kwh, 0)
+  const rate = gridRate(rows)
+  const solar = rows.find((row) => row.id === "solar")?.kwh ?? 0
+  const todaySavings = avoidedCost(solar, rate)
+  const monthRows = breakdownRows(sourceUsage(monthUsage.data, ALL))
+  const monthSavings = avoidedCost(
+    monthRows.find((row) => row.id === "solar")?.kwh ?? 0,
+    gridRate(monthRows) ?? rate
+  )
+  const projections = projectedSavings(todaySavings, getDaysInMonth(date))
+  const solarTitle = sourceUsage(usage.data, ALL).some(
+    (source) => source.deviceType === "SOLAR"
+  )
 
   return (
-    <ReportDocument
-      kind={daily ? "Daily" : "Periodic"}
-      branchName={branchName}
-      period={coverPeriod(period)}
+    <EmailReport
+      title={solarTitle ? "Daily Solar Energy Report" : "Daily Energy Report"}
     >
-      {data.totalEnergy.isPending ? (
-        <Skeleton className="h-32 w-full rounded-2xl" />
-      ) : data.totalEnergy.isError ? (
-        <Card className="px-6 ring-0">
-          <CardError onRetry={() => data.totalEnergy.refetch()} />
-        </Card>
-      ) : (
-        <TotalEnergyCard
-          value={energy.totalKwh}
-          note={`${formatNumber(energy.solarHoursKwh)} kWh in solar hours (8am–6pm)`}
-        />
-      )}
-
-      <ReportCard
-        title="Energy and cost breakdown"
-        icon={ReceiptIcon}
-        hint="Energy each source supplied and what it cost. Generator costs need diesel entries; sources without a bill show ₦0."
-      >
-        <SourcesState query={data.deviceUsage} empty={!sources.length}>
-          <BreakdownTable usage={sourceUsage(data.deviceUsage.data, ALL)} />
-        </SourcesState>
-      </ReportCard>
-
-      <ReportCard
-        title="Energy consumed per source"
-        icon={PlugZapIcon}
-        hint="How your energy consumption was distributed across your power sources, highlighting the one used most."
-      >
-        <SourcesState query={data.deviceUsage} empty={!sourcesTotal}>
-          <SourceDonut sources={sources} />
-        </SourcesState>
-      </ReportCard>
-
-      <ReportCard
-        title="Top energy contributors"
-        icon={ChartBarBigIcon}
-        description={`${formatNumber(sourcesTotal)} kWh in total`}
-        hint="The sources with the most energy consumption in this period."
-      >
-        <SourcesState query={data.deviceUsage} empty={!sourcesTotal}>
-          <div className="flex flex-col gap-4">
-            <TopContributorsChart
-              sources={[...sources].sort((a, b) => b.kwh - a.kwh)}
-            />
-            <SourceLegend sources={sources} />
+      <div className="flex flex-col gap-1 text-sm">
+        <p>Dear {personName(claims)},</p>
+        <p>
+          On {format(date, "EEEE, d MMMM yyyy")}, the breakdown of your energy
+          usage is as follows:
+        </p>
+      </div>
+      <EmailSection title="Energy & Cost Breakdown">
+        <DayState query={usage}>
+          {total === 0 && (
+            <p className="py-2 text-center text-sm text-muted-foreground">
+              No energy data available
+            </p>
+          )}
+          <BreakdownTable rows={rows} />
+        </DayState>
+      </EmailSection>
+      <EmailSection title="Cost Savings from Solar">
+        <DayState query={usage}>
+          <div className="flex flex-col gap-3">
+            <EmailNote tone="savings" title="Today's Savings">
+              <p className="font-heading text-3xl font-bold">
+                {formatNaira(Math.round(todaySavings))}
+              </p>
+              <p className="mt-1 text-sm">
+                Savings from {formatNumber(solar)} kWh of solar energy
+              </p>
+            </EmailNote>
+            <EmailNote tone="month" title="Current Month Savings">
+              {monthUsage.isPending ? (
+                <Skeleton className="h-8 w-36" />
+              ) : monthUsage.isError ? (
+                <Retry onRetry={() => monthUsage.refetch()} />
+              ) : (
+                <p className="font-heading text-3xl font-bold">
+                  {formatNaira(Math.round(monthSavings))}
+                </p>
+              )}
+            </EmailNote>
           </div>
-        </SourcesState>
-      </ReportCard>
-
-      <SectionHeading>Consumption over time</SectionHeading>
-      <ReportCard
-        title={
-          GRANULARITY[period.kind] === "hourly"
-            ? "Hourly energy by source"
-            : "Monthly energy by source"
-        }
-        icon={ChartColumnIcon}
-        description={`${periodLabel(period)} · kWh`}
-        hint={`Energy consumed per ${GRANULARITY[period.kind] === "hourly" ? "hour" : "month"}, split by the source that supplied it.`}
-      >
-        <EnergyChartBody data={data} />
-      </ReportCard>
-      <ComparisonCard period={period} current={data.deviceUsage} />
-
-      <SectionHeading>Operational performance</SectionHeading>
-      <KeyFigures data={data} />
-    </ReportDocument>
+        </DayState>
+      </EmailSection>
+      <EmailSection title="Projected Savings">
+        <DayState query={usage}>
+          <p className="text-sm">
+            Based on today&apos;s solar performance, here are your projected
+            savings:
+          </p>
+          <Table>
+            <TableBody>
+              <ProjectionRow
+                label="Weekly Projection"
+                value={projections.weekly}
+              />
+              <ProjectionRow
+                label="Monthly Projection"
+                value={projections.monthly}
+              />
+              <ProjectionRow
+                label="Annual Projection"
+                value={projections.annual}
+              />
+            </TableBody>
+          </Table>
+          <p className="text-xs text-muted-foreground italic">
+            Projections are estimates based on today&apos;s performance and may
+            vary with weather and usage patterns.
+          </p>
+        </DayState>
+      </EmailSection>
+    </EmailReport>
   )
 }
 
-/** "Sunday, 1 November 2026", or "1 Jan – 2 Nov 2026" for a year so far. */
-function coverPeriod(period: Period) {
-  if (period.kind === "day") {
-    return format(periodStart(period), "EEEE, d MMMM yyyy")
-  }
-  return `${format(periodStart(period), "d MMM")} – ${format(periodEnd(period), "d MMM yyyy")}`
+function PeriodicEmail({ start, end }: { start: Date; end: Date }) {
+  const claims = useClaims()
+  const week = useMemo<ReportWeek>(() => ({ start, end }), [start, end])
+  const previous = useMemo(() => previousPeriodicWeek(week), [week])
+  const days = useMemo(() => daysInRange(week), [week])
+  const previousDays = useMemo(() => daysInRange(previous), [previous])
+  const reportedDays = useMemo(() => elapsedDays(days), [days])
+  const current = useDayFigures(reportedDays)
+  const prior = useDayFigures(previousDays)
+  const usageByDay = useMemo(() => {
+    const byDay = new Map<string, DeviceUsageResponse | undefined>()
+    reportedDays.forEach((day, index) => {
+      byDay.set(isoDate(day), current.usage[index]?.data)
+    })
+    return byDay
+  }, [reportedDays, current.usage])
+  const rows = sumGroups(current.usage)
+  const priorRows = sumGroups(prior.usage)
+  const hasSolar = current.usage.some((query) =>
+    sourceUsage(query.data, ALL).some((source) => source.deviceType === "SOLAR")
+  )
+  const generator = rows.find((row) => row.id === "generator")
+  const pending = current.pending || prior.pending
+  const failed = current.failed || prior.failed
+
+  return (
+    <EmailReport
+      title={
+        hasSolar ? "Periodic Solar Energy Report" : "Periodic Energy Report"
+      }
+    >
+      <p className="text-center text-sm font-medium">{weekShort(week)}</p>
+      <div className="flex flex-col gap-1 text-sm">
+        <p>Dear {personName(claims)},</p>
+        <p>
+          For the period {weekSentence(week)}, the breakdown of your energy
+          usage is as follows:
+        </p>
+      </div>
+      {generator && generator.kwh > 0 && generator.naira === 0 && (
+        <EmailNote tone="warning" title="Data Entry Compliance Notice">
+          <p className="text-sm">
+            Generators supplied energy in this period, but no diesel cost is
+            recorded, so generator cost shows as {formatNaira(0)}. Log diesel
+            entries for the dates in this period so the cost matches what the
+            branch reported.
+          </p>
+        </EmailNote>
+      )}
+      <FigureState
+        pending={pending}
+        failed={failed}
+        onRetry={() => {
+          current.refetch()
+          prior.refetch()
+        }}
+      >
+        <EmailSection title="Energy Source Distribution">
+          <DistributionBar rows={rows} />
+        </EmailSection>
+        <EmailSection title="Summary">
+          <SummaryTable
+            current={rows}
+            previous={priorRows}
+            currentLabel={weekShort(week)}
+            previousLabel={weekShort(previous)}
+            currentCarbon={current.carbonTons}
+            previousCarbon={prior.carbonTons}
+          />
+        </EmailSection>
+        <EmailSection title="Key Insights">
+          <Insights
+            rows={rows}
+            currentCarbon={current.carbonTons}
+            previousCarbon={prior.carbonTons}
+            previousLabel={weekShort(previous)}
+          />
+        </EmailSection>
+        <EmailSection title="Daily Energy Usage">
+          <DailyUsageTable days={days} usageByDay={usageByDay} />
+        </EmailSection>
+        <EmailSection title="Daily EMS vs Branch Reported Comparison">
+          <p className="text-center text-sm text-muted-foreground">
+            No fuel or consumption records available for this period.
+          </p>
+        </EmailSection>
+      </FigureState>
+    </EmailReport>
+  )
 }
 
-function toSources(usage: SourceUsage[]): Source[] {
-  const colors = seriesColors(usage)
-  const total = usage.reduce((sum, s) => sum + s.kwh, 0)
-  return usage.map((s, index) => ({
-    key: String(s.deviceId),
-    label: formatDeviceName(s.name),
-    kwh: s.kwh,
-    color: colors[index],
-    percent: total ? (s.kwh / total) * 100 : 0,
-  }))
-}
-
-function SourcesState({
-  query,
-  empty,
-  children,
-}: {
-  query: { isPending: boolean; isError: boolean; refetch: () => unknown }
-  empty: boolean
-  children: React.ReactNode
-}) {
-  if (query.isPending) return <Skeleton className="h-52 w-full" />
-  if (query.isError) return <CardError onRetry={() => query.refetch()} />
-  if (empty) {
-    return (
-      <p className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-        No source data for this period.
-      </p>
-    )
-  }
-  return children
-}
-
-function BreakdownTable({ usage }: { usage: SourceUsage[] }) {
-  const totalKwh = usage.reduce((sum, s) => sum + s.kwh, 0)
-  const totalNaira = usage.reduce((sum, s) => sum + (s.naira ?? 0), 0)
+function BreakdownTable({ rows }: { rows: GroupedSource[] }) {
+  const totalKwh = rows.reduce((sum, row) => sum + row.kwh, 0)
+  const totalNaira = rows.reduce((sum, row) => sum + row.naira, 0)
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Energy source</TableHead>
+          <TableHead>Energy Source</TableHead>
           <TableHead className="text-right">Energy (kWh)</TableHead>
-          <TableHead className="text-right">Share</TableHead>
-          <TableHead className="text-right">Cost</TableHead>
+          <TableHead className="text-right">Cost (₦)</TableHead>
+          <TableHead className="text-right">Contribution (%)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {usage.map((s) => (
-          <TableRow key={s.deviceId}>
-            <TableCell className="font-medium">
-              {formatDeviceName(s.name)}
+        {rows.map((row) => (
+          <TableRow key={row.id}>
+            <TableCell>{row.label}</TableCell>
+            <TableCell className="text-right tabular-nums">
+              {formatNumber(row.kwh)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatNumber(s.kwh)}
-            </TableCell>
-            <TableCell className="text-right text-muted-foreground tabular-nums">
-              {totalKwh ? `${formatNumber((s.kwh / totalKwh) * 100, 1)}%` : "—"}
+              {formatNaira(row.naira)}
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {formatNaira(s.naira ?? 0)}
+              {formatPercent(row.kwh, totalKwh)}
             </TableCell>
           </TableRow>
         ))}
       </TableBody>
       <TableFooter>
-        <TableRow>
-          <TableCell>Total</TableCell>
+        <TableRow className="bg-emerald-50 font-semibold dark:bg-emerald-950/30">
+          <TableCell>TOTAL</TableCell>
           <TableCell className="text-right tabular-nums">
             {formatNumber(totalKwh)}
           </TableCell>
-          <TableCell className="text-right tabular-nums">100%</TableCell>
           <TableCell className="text-right tabular-nums">
             {formatNaira(totalNaira)}
           </TableCell>
+          <TableCell className="text-right tabular-nums">100%</TableCell>
         </TableRow>
       </TableFooter>
     </Table>
   )
 }
 
-/** This period against the one before it, per source (the email's
- * comparison uses the previous working day; this uses the previous calendar
- * day, or year). */
-function ComparisonCard({
-  period,
-  current,
-}: {
-  period: Period
-  current: Data["deviceUsage"]
-}) {
-  const { branch_id: branchId } = useClaims()
-  const previousPeriod = shiftPeriod(period, -1)
-  const { view, date } = serializePeriod(previousPeriod)
-  // Same key as the dashboard's device_usage query, so they share the cache.
-  const previous = useQuery({
-    queryKey: ["dashboard", "device-usage", branchId, view, date],
-    queryFn: ({ signal }) => getDeviceUsage(branchId, previousPeriod, signal),
-  })
-
-  const now = sourceUsage(current.data, ALL)
-  const before = sourceUsage(previous.data, ALL)
-  const rows = now.map((s) => ({
-    key: String(s.deviceId),
-    label: formatDeviceName(s.name),
-    previous: before.find((b) => b.deviceId === s.deviceId)?.kwh ?? 0,
-    current: s.kwh,
-  }))
-  const total = {
-    previous: rows.reduce((sum, r) => sum + r.previous, 0),
-    current: rows.reduce((sum, r) => sum + r.current, 0),
-  }
-  const previousLabel = periodLabel(previousPeriod)
-
+function ProjectionRow({ label, value }: { label: string; value: number }) {
   return (
-    <ReportCard
-      title={`Compared with ${period.kind === "day" ? "the day before" : "the year before"}`}
-      icon={HistoryIcon}
-      description={`${previousLabel} against ${periodLabel(period)} · kWh`}
-      hint="Energy per source in this period and the one before it."
-    >
-      {current.isPending || previous.isPending ? (
-        <Skeleton className="h-52 w-full" />
-      ) : current.isError || previous.isError ? (
-        <CardError
-          onRetry={() => {
-            current.refetch()
-            previous.refetch()
-          }}
-        />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead className="text-right">{previousLabel}</TableHead>
-              <TableHead className="text-right">
-                {periodLabel(period)}
-              </TableHead>
-              <TableHead className="text-right">Change</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r) => (
-              <TableRow key={r.key}>
-                <TableCell className="font-medium">{r.label}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(r.previous)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(r.current)}
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground tabular-nums">
-                  {change(r.previous, r.current)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TableCell>Total</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(total.previous)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(total.current)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {change(total.previous, total.current)}
-              </TableCell>
-            </TableRow>
-          </TableFooter>
-        </Table>
-      )}
-    </ReportCard>
+    <TableRow>
+      <TableCell>{label}</TableCell>
+      <TableCell className="text-right font-medium tabular-nums">
+        {formatNaira(Math.round(value))}
+      </TableCell>
+    </TableRow>
   )
 }
 
-/** "+12%", "−8%", or "—" when there is nothing to compare against. */
-function change(previous: number, current: number) {
-  if (!previous) return "—"
-  const rounded = Math.round(((current - previous) / previous) * 100)
-  if (rounded === 0) return "0%"
-  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded)}%`
+function DistributionBar({ rows }: { rows: GroupedSource[] }) {
+  const shown = rows.filter((row) => row.kwh > 0)
+  const total = shown.reduce((sum, row) => sum + row.kwh, 0)
+  if (!total) {
+    return (
+      <p className="text-center text-sm text-muted-foreground">
+        No energy data available
+      </p>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+        {shown.map((row) => (
+          <div
+            key={row.id}
+            style={{
+              width: `${(row.kwh / total) * 100}%`,
+              backgroundColor: SOURCE_COLOR[row.id],
+            }}
+          />
+        ))}
+      </div>
+      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
+        {shown.map((row) => (
+          <li key={row.id} className="flex items-center gap-1.5">
+            <span
+              className="size-2.5 rounded-sm"
+              style={{ backgroundColor: SOURCE_COLOR[row.id] }}
+            />
+            {row.label} ({formatPercent(row.kwh, total)})
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
-/** Demand, carbon and blended cost: the dashboard's headline figures. */
-function KeyFigures({ data }: { data: Data }) {
-  const demand = demandSummary(data.demand.data, null)
-  const energy = totalEnergy(data.totalEnergy.data, ALL)
-  const figures = [
-    {
-      label: "Max demand",
-      query: data.demand,
-      value: formatNumber(demand.max, 1),
-      unit: "kVA",
-    },
-    {
-      label: "Average demand",
-      query: data.demand,
-      value: formatNumber(demand.avg, 1),
-      unit: "kVA",
-    },
-    {
-      label: "Carbon emissions",
-      query: data.totalEnergy,
-      value: formatNumber(energy.carbonTons),
-      unit: "tons",
-    },
-    {
-      label: "Blended cost of energy",
-      query: data.blendedCost,
-      value: `₦${formatNumber(data.blendedCost.data?.data)}`,
-      unit: "per kWh",
-    },
-  ]
+function SummaryTable({
+  current,
+  previous,
+  currentLabel,
+  previousLabel,
+  currentCarbon,
+  previousCarbon,
+}: {
+  current: GroupedSource[]
+  previous: GroupedSource[]
+  currentLabel: string
+  previousLabel: string
+  currentCarbon: number
+  previousCarbon: number
+}) {
+  const now = new Map(current.map((row) => [row.id, row]))
+  const then = new Map(previous.map((row) => [row.id, row]))
+  const nowTotal = current.reduce((sum, row) => sum + row.kwh, 0)
+  const thenTotal = previous.reduce((sum, row) => sum + row.kwh, 0)
+  const ids = ["solar", "grid", "generator", "ipp"] as const
   return (
-    <ReportCard
-      title="Key figures"
-      icon={GaugeIcon}
-      hint="Peak and average power demand help size generators; blended cost is the average cost of a kWh across all sources."
-    >
-      <dl className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {figures.map((f) => (
-          <div key={f.label} className="flex flex-col gap-1">
-            <dt className="text-sm text-muted-foreground">{f.label}</dt>
-            <dd>
-              {f.query.isPending ? (
-                <Skeleton className="h-8 w-24" />
-              ) : f.query.isError ? (
-                <CardError onRetry={() => f.query.refetch()} />
-              ) : (
-                <Stat value={f.value} unit={f.unit} />
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </ReportCard>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Parameters</TableHead>
+          <TableHead className="text-right">
+            Current Period ({currentLabel})
+          </TableHead>
+          <TableHead className="text-right">
+            Previous Period ({previousLabel})
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {ids.map((id) => {
+          const row = now.get(id) ?? then.get(id)
+          if (!row) return null
+          return (
+            <TableRow key={id}>
+              <TableCell className="font-medium">{row.label}</TableCell>
+              <TableCell className="text-right">
+                <Amount group={now.get(id)} of={nowTotal} />
+              </TableCell>
+              <TableCell className="text-right">
+                <Amount group={then.get(id)} of={thenTotal} />
+              </TableCell>
+            </TableRow>
+          )
+        })}
+        <TableRow>
+          <TableCell className="font-medium">CO2 Emissions</TableCell>
+          <TableCell className="text-right tabular-nums">
+            {formatNumber(currentCarbon)} tons
+          </TableCell>
+          <TableCell className="text-right tabular-nums">
+            {formatNumber(previousCarbon)} tons
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+  )
+}
+
+function Amount({ group, of }: { group?: GroupedSource; of: number }) {
+  const kwh = group?.kwh ?? 0
+  const naira = group?.naira ?? 0
+  return (
+    <span className="flex flex-col items-end tabular-nums">
+      <span>
+        {formatNumber(kwh)} kWh ({formatPercent(kwh, of)})
+      </span>
+      <span className="text-xs text-muted-foreground">
+        {formatNaira(naira)}
+      </span>
+    </span>
+  )
+}
+
+function Insights({
+  rows,
+  currentCarbon,
+  previousCarbon,
+  previousLabel,
+}: {
+  rows: GroupedSource[]
+  currentCarbon: number
+  previousCarbon: number
+  previousLabel: string
+}) {
+  const total = rows.reduce((sum, row) => sum + row.kwh, 0)
+  const solar = rows.find((row) => row.id === "solar")?.kwh ?? 0
+  const savings = avoidedCost(solar, gridRate(rows))
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      <p>
+        Solar supplied {formatPercent(solar, total)} of this period&apos;s
+        energy ({formatNumber(solar)} kWh). Priced at the grid tariff, that is
+        about {formatNaira(Math.round(savings))} that did not have to be bought
+        from the grid.
+      </p>
+      <p className="text-muted-foreground">
+        Carbon emissions were {formatNumber(currentCarbon)} tons, against{" "}
+        {formatNumber(previousCarbon)} tons in the previous period (
+        {previousLabel}).
+      </p>
+    </div>
+  )
+}
+
+function DailyUsageTable({
+  days,
+  usageByDay,
+}: {
+  days: Date[]
+  usageByDay: Map<string, DeviceUsageResponse | undefined>
+}) {
+  const parsed = days.map((day) => ({
+    day,
+    rows: breakdownRows(sourceUsage(usageByDay.get(isoDate(day)), ALL)),
+  }))
+  const showIpp = parsed.some((entry) =>
+    entry.rows.some((row) => row.id === "ipp" && row.kwh > 0)
+  )
+  const columns = [
+    "solar",
+    "grid",
+    "generator",
+    ...(showIpp ? ["ipp"] : []),
+  ] as const
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          {columns.map((id) => (
+            <TableHead key={id} className="text-right">
+              {id === "ipp" ? "IPP" : id[0].toUpperCase() + id.slice(1)}
+            </TableHead>
+          ))}
+          <TableHead className="text-right">Total</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {parsed.map(({ day, rows }) => {
+          const total = rows.reduce((sum, row) => sum + row.kwh, 0)
+          return (
+            <TableRow key={isoDate(day)}>
+              <TableCell className="font-medium whitespace-nowrap">
+                {isoDate(day)}
+              </TableCell>
+              {columns.map((id) => {
+                const row = rows.find((item) => item.id === id)
+                return (
+                  <TableCell key={id} className="text-right">
+                    <UsageCell
+                      kwh={row?.kwh ?? 0}
+                      naira={row?.naira ?? 0}
+                      of={total}
+                    />
+                  </TableCell>
+                )
+              })}
+              <TableCell className="text-right font-medium tabular-nums">
+                {formatNumber(total)} kWh
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
+  )
+}
+
+function UsageCell({
+  kwh,
+  naira,
+  of,
+}: {
+  kwh: number
+  naira: number
+  of: number
+}) {
+  return (
+    <span className="flex flex-col items-end tabular-nums">
+      <span>
+        {formatNumber(kwh)} kWh ({formatPercent(kwh, of)})
+      </span>
+      <span className="text-xs text-muted-foreground">
+        {formatNaira(naira)}
+      </span>
+    </span>
+  )
+}
+
+function useDayUsage(date: Date) {
+  return useDayQuery({ kind: "day", anchor: date }, getDeviceUsage)
+}
+
+function useDayQuery(
+  period: Period,
+  fetch: (
+    branchId: number,
+    period: Period,
+    signal?: AbortSignal
+  ) => Promise<DeviceUsageResponse>
+) {
+  const { branch_id: branchId } = useClaims()
+  const { view, date } = serializePeriod(period)
+  return useQuery({
+    queryKey: ["dashboard", "device-usage", branchId, view, date],
+    queryFn: ({ signal }) => fetch(branchId, period, signal),
+  })
+}
+
+function useDayFigures(days: Date[]) {
+  const { branch_id: branchId } = useClaims()
+  const usage = useQueries({
+    queries: days.map((anchor) => {
+      const period: Period = { kind: "day", anchor }
+      const { view, date } = serializePeriod(period)
+      return {
+        queryKey: ["dashboard", "device-usage", branchId, view, date],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getDeviceUsage(branchId, period, signal),
+      }
+    }),
+  })
+  const carbon = useQueries({
+    queries: days.map((anchor) => {
+      const period: Period = { kind: "day", anchor }
+      const { view, date } = serializePeriod(period)
+      return {
+        queryKey: ["dashboard", "total-energy", branchId, view, date],
+        queryFn: ({ signal }: { signal: AbortSignal }) =>
+          getTotalEnergy(branchId, period, signal),
+      }
+    }),
+  })
+  const carbonTons = carbon.reduce(
+    (sum, query) => sum + totalEnergy(query.data, ALL).carbonTons,
+    0
+  )
+  return {
+    usage,
+    carbonTons,
+    pending: [...usage, ...carbon].some((query) => query.isPending),
+    failed: [...usage, ...carbon].some((query) => query.isError),
+    refetch: () => {
+      for (const query of usage) query.refetch()
+      for (const query of carbon) query.refetch()
+    },
+  }
+}
+
+function sumGroups(queries: DayQuery<DeviceUsageResponse>[]) {
+  return breakdownRows(queries.flatMap((query) => sourceUsage(query.data, ALL)))
+}
+
+function personName(claims: {
+  first_name?: string
+  last_name?: string
+  username: string
+}) {
+  const name = [claims.first_name, claims.last_name].filter(Boolean).join(" ")
+  return name || claims.username
+}
+
+function DayState({
+  query,
+  children,
+}: {
+  query: { isPending: boolean; isError: boolean; refetch: () => unknown }
+  children: React.ReactNode
+}) {
+  if (query.isPending) return <Skeleton className="h-40 w-full" />
+  if (query.isError) return <Retry onRetry={() => query.refetch()} />
+  return children
+}
+
+function FigureState({
+  pending,
+  failed,
+  onRetry,
+  children,
+}: {
+  pending: boolean
+  failed: boolean
+  onRetry: () => void
+  children: React.ReactNode
+}) {
+  if (pending) return <Skeleton className="h-80 w-full" />
+  if (failed) return <Retry onRetry={onRetry} />
+  return children
+}
+
+function Retry({ onRetry }: { onRetry: () => void }) {
+  return (
+    <p className="text-sm text-muted-foreground">
+      These figures didn&apos;t load.{" "}
+      <button type="button" className="text-brand underline" onClick={onRetry}>
+        Try again
+      </button>
+    </p>
   )
 }

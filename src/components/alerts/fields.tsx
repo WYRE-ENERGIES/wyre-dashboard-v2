@@ -25,6 +25,7 @@ export function AlertRow({
   description,
   children,
   badge,
+  rowId,
 }: {
   /** The switch's field; omit for info-only rows. */
   name?: BooleanField
@@ -33,11 +34,16 @@ export function AlertRow({
   children?: React.ReactNode
   /** Shown instead of a switch on info-only rows. */
   badge?: string
+  /** Anchor for the toolbar chips that scroll to this row. */
+  rowId?: string
 }) {
   const id = React.useId()
   const { control } = useFormContext<AlertsFormValues>()
   return (
-    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+    <div
+      id={rowId}
+      className="flex scroll-mt-24 flex-col gap-3 py-4 first:pt-0 last:pb-0"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <label
