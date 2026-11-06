@@ -12,20 +12,30 @@ import {
 import type { GeneratorRef } from "@/lib/api/diesel-types"
 import { seriesColors } from "@/lib/dashboard/colors"
 import { formatDeviceName } from "@/lib/format"
-import { periodLabel, type Period } from "@/lib/period"
+import {
+  isDayView,
+  periodEnd,
+  periodLabel,
+  periodStart,
+  type Period,
+} from "@/lib/period"
 
 /**
  * Description line for a card. Cards whose endpoint only has whole months
- * say so when a Day is selected, instead of silently showing the month.
+ * say so when a day or range is selected, instead of silently showing the
+ * month(s).
  */
 export function scopeText(period: Period, monthOnly = false) {
-  if (monthOnly && period.kind === "day")
-    return `${format(period.anchor, "MMMM yyyy")} (whole month)`
-  return periodLabel(period)
+  if (!monthOnly || !isDayView(period)) return periodLabel(period)
+  const first = format(periodStart(period), "MMMM yyyy")
+  const last = format(periodEnd(period), "MMMM yyyy")
+  return first === last
+    ? `${first} (whole month)`
+    : `${format(periodStart(period), "MMMM")} – ${last} (whole months)`
 }
 
 export const MONTH_ONLY_HINT =
-  "This figure is only available per month, so a selected day shows its whole month."
+  "This figure is only available per month, so selected days show their whole month."
 
 export const BRANCH_WIDE_HINT =
   "Branch-wide figure: the device filter doesn't apply to it."

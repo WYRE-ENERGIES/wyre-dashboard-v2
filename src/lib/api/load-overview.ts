@@ -1,8 +1,6 @@
 import { apiRequest } from "@/lib/api/client"
 import { getBranchDemand } from "@/lib/api/endpoints"
 import type { BranchDemandResponse, DeviceBase } from "@/lib/api/types"
-import { DEMO } from "@/lib/demo"
-import { demoLoadOverview } from "@/lib/demo-data/load-overview"
 import { endpointRange, GRANULARITY, type Period } from "@/lib/period"
 
 /**
@@ -39,20 +37,15 @@ export const getLoadOverview = (
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoLoadOverview.overview(branchId, period)
-    : apiRequest<LoadOverviewResponse>(
-        `dashboard/load_overview/${branchId}/${endpointRange(period)}/${GRANULARITY[period.kind]}`,
-        { signal }
-      )
+  apiRequest<LoadOverviewResponse>(
+    `dashboard/load_overview/${branchId}/${endpointRange(period)}/${GRANULARITY[period.kind]}`,
+    { signal }
+  )
 
-/** Per-device demand (branch_demand), which also covers load meters. Demo
- * mode adds demo loads; the real call is the dashboard's. */
+/** Per-device demand (branch_demand), which also covers load meters; the
+ * same call the dashboard makes. */
 export const getLoadDemand = (
   branchId: number,
   period: Period,
   signal?: AbortSignal
-): Promise<BranchDemandResponse> =>
-  DEMO
-    ? demoLoadOverview.demand(branchId, period)
-    : getBranchDemand(branchId, period, signal)
+): Promise<BranchDemandResponse> => getBranchDemand(branchId, period, signal)

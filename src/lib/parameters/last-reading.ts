@@ -3,8 +3,19 @@ import type {
   PhaseReading,
   ValueReading,
 } from "@/lib/api/parameters-types"
-import { displayUnit } from "@/lib/parameters/series"
+import { isValid, parse } from "date-fns"
+
+import { displayUnit, parseApiDate } from "@/lib/parameters/series"
 import { isFuturePeriod, periodEnd, type Period } from "@/lib/period"
+
+/** When the reading was taken. The live API sends C-style timestamps such as
+ * "Fri Nov  6 08:03:46 2026" (day padded with a space); ISO is accepted too. */
+export function readingTime(value: string | null | undefined) {
+  if (!value) return null
+  const compact = value.trim().replace(/\s+/g, " ")
+  const asctime = parse(compact, "EEE MMM d HH:mm:ss yyyy", new Date())
+  return isValid(asctime) ? asctime : parseApiDate(value)
+}
 
 /** True for the period that contains "now" (Last Reading then means "latest"). */
 export function includesNow(period: Period, now = new Date()) {

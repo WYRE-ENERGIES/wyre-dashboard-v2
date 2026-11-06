@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { selectGenerators, sumNumbers } from "@/lib/diesel/metrics"
 import { formatHours, formatNumber } from "@/lib/format"
+import { isDayView } from "@/lib/period"
 
 const kwh = (v: number) => `${formatNumber(v, 1)} kWh`
 const litres = (v: number) => `${formatNumber(v, 1)} L`
@@ -29,8 +30,8 @@ const litres = (v: number) => `${formatNumber(v, 1)} L`
 /** Old TotalEnergyUsed.js: energy per generator, total in the centre. */
 export function EnergyByGeneratorCard({ data }: { data: DieselData }) {
   const { selectedDeviceIds } = useFilters()
-  const isDay = data.period.kind === "day"
-  // A Day has no generators-monthly-energy figure; its daily series has it.
+  const isDay = isDayView(data.period)
+  // Days have no generators-monthly-energy figure; the daily series has it.
   const query = isDay ? data.series : data.energy
   const source = isDay
     ? (data.series.data ?? []).map((g) => ({
@@ -113,7 +114,7 @@ export function GeneratorStatusCard({ data }: { data: DieselData }) {
         <CardAction>
           <InfoHint>
             How long each generator ran and how much diesel it used.{" "}
-            {data.period.kind === "day" && MONTH_ONLY_HINT}
+            {isDayView(data.period) && MONTH_ONLY_HINT}
           </InfoHint>
         </CardAction>
       </CardHeader>

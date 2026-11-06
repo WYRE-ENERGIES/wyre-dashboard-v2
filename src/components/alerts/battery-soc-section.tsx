@@ -4,7 +4,7 @@ import * as React from "react"
 import { useFormContext, useWatch } from "react-hook-form"
 import { ClockIcon, XIcon } from "lucide-react"
 
-import { Callout } from "@/components/alerts/fields"
+import { Callout, SwitchSaveContext } from "@/components/alerts/fields"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,6 @@ import { Switch } from "@/components/ui/switch"
 import {
   formatThreshold,
   formatTime12h,
-  limitThresholds,
   MAX_SCHEDULE_TIMES,
   THRESHOLD_OPERATORS,
   type AlertsFormValues,
@@ -33,8 +32,8 @@ import type { SocOperator } from "@/lib/api/alerts-types"
  */
 export function BatterySocSection({ solarOnly }: { solarOnly: boolean }) {
   const { control, setValue } = useFormContext<AlertsFormValues>()
+  const saveSwitch = React.useContext(SwitchSaveContext)
   const soc = useWatch({ control, name: "soc" })
-  const days = useWatch({ control, name: "daily_energy_usage_days" })
   const set = <K extends keyof AlertsFormValues["soc"]>(
     key: K,
     value: AlertsFormValues["soc"][K]
@@ -60,7 +59,10 @@ export function BatterySocSection({ solarOnly }: { solarOnly: boolean }) {
             id="soc-email"
             className="mt-0.5"
             checked={soc.email_enabled}
-            onCheckedChange={(checked) => set("email_enabled", checked)}
+            onCheckedChange={(checked) => {
+              set("email_enabled", checked)
+              saveSwitch?.("soc.email_enabled", checked)
+            }}
             aria-label="Send battery level alerts by email"
           />
         </div>
@@ -68,7 +70,6 @@ export function BatterySocSection({ solarOnly }: { solarOnly: boolean }) {
           <div className="grid gap-3 lg:grid-cols-2">
             <ScheduleTimes
               value={soc.schedule_times}
-              days={days}
               onChange={(next) => set("schedule_times", next)}
             />
             <Thresholds
@@ -126,11 +127,9 @@ const QUARTER_HOURS = Array.from({ length: 24 * 4 }, (_, index) => {
 
 function ScheduleTimes({
   value,
-  days,
   onChange,
 }: {
   value: ScheduleTime[]
-  days: number[]
   onChange: (next: ScheduleTime[]) => void
 }) {
   const [time, setTime] = React.useState<string | null>(null)
@@ -144,9 +143,7 @@ function ScheduleTimes({
     if (value.some((entry) => entry.time === time)) {
       return setError("This time is already scheduled.")
     }
-    onChange(
-      [...value, { time, days }].sort((a, b) => a.time.localeCompare(b.time))
-    )
+    onChange([...value, { time }].sort((a, b) => a.time.localeCompare(b.time)))
     setTime(null)
     setError("")
   }
@@ -162,9 +159,10 @@ function ScheduleTimes({
       </div>
       <div className="flex min-h-8 flex-wrap gap-2">
         {value.length ? (
-          value.map((entry) => (
+          value.map((entry, index) => (
             <span
-              key={entry.time}
+              // Older settings may repeat a time, so the index keeps keys unique.
+              key={`${entry.time}-${index}`}
               className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-background px-3 py-1.5 text-sm font-semibold text-brand"
             >
               {formatTime12h(entry.time)}
@@ -172,9 +170,7 @@ function ScheduleTimes({
                 type="button"
                 aria-label={`Remove ${formatTime12h(entry.time)}`}
                 className="rounded-full p-0.5 text-brand/80 hover:bg-brand/10 hover:text-brand"
-                onClick={() =>
-                  onChange(value.filter((item) => item.time !== entry.time))
-                }
+                onClick={() => onChange(value.filter((_, i) => i !== index))}
               >
                 <XIcon className="size-3" />
               </button>
@@ -212,6 +208,11 @@ function ScheduleTimes({
             Add time
           </Button>
         </div>
+      ) : value.length > MAX_SCHEDULE_TIMES ? (
+        <p className="text-sm text-muted-foreground">
+          These were set up before the two-time limit and still apply. Remove{" "}
+          {value.length - MAX_SCHEDULE_TIMES} to add a different time.
+        </p>
       ) : (
         <p className="text-sm text-muted-foreground">
           Two times is the maximum.
@@ -250,7 +251,8 @@ function Thresholds({
       return setError("Enter a percentage from 0 to 100.")
     }
     if (!selected) return setError("One drop and one rise is the maximum.")
-    onChange(limitThresholds([...value, { operator: selected, value: n }]))
+    // `selected` is always a direction not in use yet.
+    onChange([...value, { operator: selected, value: n }])
     setPercent("")
     const remaining = THRESHOLD_OPERATORS.find(
       (option) => option.value !== selected
@@ -278,9 +280,9 @@ function Thresholds({
       </div>
       <div className="flex min-h-8 flex-wrap gap-2">
         {value.length ? (
-          value.map((entry) => (
+          value.map((entry, index) => (
             <span
-              key={`${entry.operator}-${entry.value}`}
+              key={`${entry.operator}-${entry.value}-${index}`}
               className="inline-flex items-center gap-1 rounded-full border border-brand/30 bg-background px-3 py-1.5 text-sm font-semibold text-brand tabular-nums"
             >
               {formatThreshold(entry)}
@@ -288,15 +290,7 @@ function Thresholds({
                 type="button"
                 aria-label={`Remove ${formatThreshold(entry)}`}
                 className="rounded-full p-0.5 text-brand/80 hover:bg-brand/10 hover:text-brand"
-                onClick={() =>
-                  onChange(
-                    value.filter(
-                      (item) =>
-                        item.operator !== entry.operator ||
-                        item.value !== entry.value
-                    )
-                  )
-                }
+                onClick={() => onChange(value.filter((_, i) => i !== index))}
               >
                 <XIcon className="size-3" />
               </button>
@@ -354,6 +348,11 @@ function Thresholds({
             Add threshold
           </Button>
         </div>
+      ) : value.length > THRESHOLD_OPERATORS.length ? (
+        <p className="text-sm text-muted-foreground">
+          These were set up before the one-drop-one-rise limit and still apply.
+          Remove the extras to add a different level.
+        </p>
       ) : (
         <p className="text-sm text-muted-foreground">
           One drop and one rise is the maximum.

@@ -3,12 +3,7 @@
 import * as React from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
-import {
-  ArrowRightIcon,
-  FileDownIcon,
-  InfoIcon,
-  ReceiptIcon,
-} from "lucide-react"
+import { ArrowRightIcon, FileDownIcon, ReceiptIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -26,7 +21,6 @@ import {
 } from "@/components/shared/card-parts"
 import { DataTable } from "@/components/shared/data-table"
 import { PageHeader } from "@/components/shared/page-header"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -52,7 +46,6 @@ import {
   currentBranches,
   type DeviceBill,
 } from "@/lib/billing/metrics"
-import { DEMO } from "@/lib/demo"
 import { fileSlug } from "@/lib/export"
 import { formatDeviceName, formatNaira, formatNumber } from "@/lib/format"
 import { visibleNav } from "@/lib/gating"
@@ -62,7 +55,7 @@ export function BillingView() {
   const claims = useClaims()
   const allowed = visibleNav(claims).has("billing")
 
-  if (!allowed && !DEMO) {
+  if (!allowed) {
     return (
       <>
         <PageHeader title="Billing" />
@@ -82,23 +75,15 @@ export function BillingView() {
       </>
     )
   }
-  return (
-    <BillingContent
-      userId={claims.id}
-      branchId={claims.branch_id}
-      demoPreview={!allowed}
-    />
-  )
+  return <BillingContent userId={claims.id} branchId={claims.branch_id} />
 }
 
 function BillingContent({
   userId,
   branchId,
-  demoPreview,
 }: {
   userId: number
   branchId: number
-  demoPreview: boolean
 }) {
   const { period, selectedDeviceIds } = useFilters()
   const { view, date } = serializePeriod(period)
@@ -175,16 +160,6 @@ function BillingContent({
           </>
         }
       />
-
-      {demoPreview && (
-        <Alert>
-          <InfoIcon />
-          <AlertDescription>
-            Billing is a reseller feature. Demo mode shows it on every account
-            so you can try it.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <BillCard

@@ -1,7 +1,5 @@
 import {
   addDays,
-  differenceInCalendarDays,
-  format,
   isAfter,
   isValid,
   parseISO,
@@ -20,19 +18,24 @@ export function reportWeek(anchor: Date): ReportWeek {
   return { start, end: addDays(start, 6) }
 }
 
-/** The week the periodic report should show for the current global period. */
+/**
+ * The range the periodic report should show for the current global period:
+ * a picked range of days as it is, otherwise the Monday–Sunday week
+ * containing today (or the period's first day). Never runs past today: the
+ * report has nothing for days that haven't happened.
+ */
 export function periodicWeek(period: Period, now = new Date()): ReportWeek {
+  const today = startOfDay(now)
   const start = periodStart(period)
-  const containsToday =
-    !isAfter(start, now) && !isAfter(now, periodEnd(period, now))
-  return reportWeek(containsToday ? now : start)
-}
-
-/** The range of the same length immediately before this one. */
-export function previousPeriodicWeek(week: ReportWeek): ReportWeek {
-  const span = differenceInCalendarDays(week.end, week.start)
-  const end = addDays(week.start, -1)
-  return { start: addDays(end, -span), end }
+  const week =
+    period.kind === "range"
+      ? { start, end: startOfDay(periodEnd(period, now)) }
+      : reportWeek(
+          !isAfter(start, now) && !isAfter(now, periodEnd(period, now))
+            ? now
+            : start
+        )
+  return isAfter(week.end, today) ? { ...week, end: today } : week
 }
 
 /**
@@ -54,28 +57,4 @@ export function reportRangeFromParams(
   if (isAfter(first, today) || isAfter(first, last)) return null
   if (isAfter(last, today)) last = today
   return { start: first, end: last }
-}
-
-/** Days in the week that have already happened, today included. */
-export function elapsedDays(days: Date[], now = new Date()) {
-  const today = startOfDay(now)
-  return days.filter((day) => !isAfter(startOfDay(day), today))
-}
-
-export function daysInRange({ start, end }: ReportWeek) {
-  const days: Date[] = []
-  for (let day = start; !isAfter(day, end); day = addDays(day, 1))
-    days.push(day)
-  return days
-}
-
-/** "Monday, 2 November 2026 to Sunday, 8 November 2026". */
-export function weekSentence(week: ReportWeek) {
-  const day = (date: Date) => format(date, "EEEE, d MMMM yyyy")
-  return `${day(week.start)} to ${day(week.end)}`
-}
-
-/** "2nd November to 7th November". */
-export function weekShort(week: ReportWeek) {
-  return `${format(week.start, "do MMMM")} to ${format(week.end, "do MMMM")}`
 }

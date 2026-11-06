@@ -24,6 +24,17 @@ import {
   periodSolarDate,
   seriesRow,
 } from "@/lib/solar/metrics"
+import type { SolarBatteryPlot } from "@/lib/api/solar-types"
+
+/** Mean of the hours that reported a state of charge, or null. */
+function averageSoc(plot: SolarBatteryPlot) {
+  const values = plot.points
+    .map((p) => p.socPct)
+    .filter((v): v is number => typeof v === "number")
+  return values.length
+    ? values.reduce((a, b) => a + b, 0) / values.length
+    : null
+}
 
 /**
  * True while the tab is visible and the user has done something in the last
@@ -112,9 +123,8 @@ export function useSolarLive(branchId: number) {
  * - Month: yield for the month + per-day yields for the daily charts.
  * - Year:  per-month yields, used for both the summary and the monthly charts
  *          (there is no year filter on `solar/yield`).
- * Plus "all time" yield (production's default view) on demand.
  */
-export function useSolarData({ allTime }: { allTime: boolean }) {
+export function useSolarData() {
   const { branch_id: branchId } = useClaims()
   const { period } = useFilters()
   const queryClient = useQueryClient()
@@ -149,21 +159,15 @@ export function useSolarData({ allTime }: { allTime: boolean }) {
   const summary = useQuery({
     queryKey: ["solar", "yield", ...key],
     queryFn: async ({ signal }) =>
-      period.kind === "year"
-        ? // Reuses (and shares the in-flight request with) the monthly buckets.
+      period.kind === "year" || period.kind === "range"
+        ? // Reuses (and shares the in-flight request with) the month or day
+          // buckets: solar/yield has no range filter.
           mergeYields(
             (await queryClient.ensureQueryData(seriesOptions)).map(
               (b) => b.yield
             )
           )
         : getSolarYield(branchId, periodSolarDate(period), signal),
-    enabled: !allTime,
-  })
-
-  const allTimeYield = useQuery({
-    queryKey: ["solar", "yield", branchId, "all-time"],
-    queryFn: ({ signal }) => getSolarYield(branchId, undefined, signal),
-    enabled: allTime,
   })
 
   const consumption = useQuery({
@@ -181,6 +185,24 @@ export function useSolarData({ allTime }: { allTime: boolean }) {
     queryFn: ({ signal }) => getBatteryPlot(branchId, day!, signal),
     enabled: day !== null,
   })
+  // Daily state of charge for a month or range: each day's hourly plot,
+  // averaged. A year would need ~365 requests, so it has no SOC line until
+  // the series endpoint carries SOC (proposal E10).
+  const dailySoc = useQuery({
+    queryKey: ["solar", "battery-daily-soc", ...key],
+    queryFn: async ({ signal }) => {
+      const days = periodBuckets(period)
+      const plots = await mapLimit(days, 4, (b) =>
+        getBatteryPlot(
+          branchId,
+          { year: b.year, month: b.month, day: b.day! },
+          signal
+        )
+      )
+      return new Map(days.map((b, i) => [b.key, averageSoc(plots[i])]))
+    },
+    enabled: period.kind === "month" || period.kind === "range",
+  })
 
   const rows = (series.data ?? []).map((b) => seriesRow(b.key, b.yield))
 
@@ -188,12 +210,13 @@ export function useSolarData({ allTime }: { allTime: boolean }) {
     branchId,
     period,
     weather,
-    summary: allTime ? allTimeYield : summary,
+    summary,
     series,
     rows,
     consumption,
     pv,
     battery,
+    dailySoc,
   }
 }
 

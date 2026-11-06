@@ -8,8 +8,6 @@ import type {
   PowerQualityResponse,
   TimeOfUseResponse,
 } from "@/lib/api/parameters-types"
-import { DEMO } from "@/lib/demo"
-import { demoParameters } from "@/lib/demo-data/parameters"
 import {
   endpointRange,
   GRANULARITY,
@@ -29,38 +27,32 @@ export const getEnergyConsumption = (
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoParameters.energyConsumption(period)
-    : apiRequest<EnergyConsumptionResponse>(
-        ranged("dashboard/energy_consumption", branchId, period),
-        {
-          signal,
-        }
-      )
+  apiRequest<EnergyConsumptionResponse>(
+    ranged("dashboard/energy_consumption", branchId, period),
+    {
+      signal,
+    }
+  )
 
 export const getPowerQuality = (
   branchId: number,
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoParameters.powerQuality(period)
-    : apiRequest<PowerQualityResponse>(
-        ranged("dashboard/power_quality", branchId, period),
-        { signal }
-      )
+  apiRequest<PowerQualityResponse>(
+    ranged("dashboard/power_quality", branchId, period),
+    { signal }
+  )
 
 export const getPowerDemand = (
   branchId: number,
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoParameters.powerDemand(period)
-    : apiRequest<PowerDemandResponse>(
-        ranged("dashboard/power_demand", branchId, period),
-        { signal }
-      )
+  apiRequest<PowerDemandResponse>(
+    ranged("dashboard/power_demand", branchId, period),
+    { signal }
+  )
 
 /** The moment Last Reading asks for: the period's end ("now" for the current
  * period). The old page sent a malformed date (`01-03-2001`), which made the
@@ -73,12 +65,10 @@ export const getLastReading = (
   signal?: AbortSignal
 ) => {
   const asOf = lastReadingAsOf(period)
-  return DEMO
-    ? demoParameters.lastReading(asOf)
-    : apiRequest<LastReadingResponse>(
-        `dashboard/last_reading/${branchId}/${encodeURIComponent(format(asOf, "dd-MM-yyyy HH:mm"))}`,
-        { signal }
-      )
+  return apiRequest<LastReadingResponse>(
+    `dashboard/last_reading/${branchId}/${encodeURIComponent(format(asOf, "dd-MM-yyyy HH:mm"))}`,
+    { signal }
+  )
 }
 
 /**
@@ -92,8 +82,6 @@ export const getTimeOfUse = (
   period: Period,
   signal?: AbortSignal
 ) =>
-  DEMO
-    ? demoParameters.timeOfUse(period)
-    : apiRequest<TimeOfUseResponse>(ranged("dashboard", userId, period), {
-        signal,
-      })
+  apiRequest<TimeOfUseResponse>(ranged("dashboard", userId, period), {
+    signal,
+  })

@@ -173,7 +173,8 @@ export function energySeries(
     .map((date, index) => ({ date, index }))
     .filter(({ date }) => date >= start && date <= end)
 
-  if (period.kind === "month") {
+  // A month or a range of days: one bar per day.
+  if (period.kind !== "year") {
     const rows = days.map(({ date, index }) => {
       const row = {
         label: format(parseISO(date), "d"),

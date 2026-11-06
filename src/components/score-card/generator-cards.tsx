@@ -84,18 +84,23 @@ export function GeneratorSizeCard() {
               <li key={g.name} className="flex items-center gap-4">
                 <RingGauge
                   size={104}
-                  percent={g.usage}
+                  percent={g.sizeMissing ? 0 : g.usage}
                   tone={g.tone}
-                  label={`${formatNumber(g.usage, 1)}${g.unit}`}
+                  label={
+                    g.sizeMissing ? "—" : `${formatNumber(g.usage, 1)}${g.unit}`
+                  }
                   caption="load"
                 />
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <span className="font-medium break-words">
-                    {title(g.name, g.size)}
+                    {g.sizeMissing
+                      ? formatDeviceName(g.name)
+                      : title(g.name, g.size)}
                   </span>
                   <span className="text-sm text-muted-foreground tabular-nums">
-                    {formatNumber(g.usage)}
-                    {g.unit} of capacity
+                    {g.sizeMissing
+                      ? "Add its rated kVA to score the loading"
+                      : `${formatNumber(g.usage)}${g.unit} of capacity`}
                   </span>
                   <RatingBadge tone={g.tone}>{g.message}</RatingBadge>
                 </div>

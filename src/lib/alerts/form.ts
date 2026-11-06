@@ -72,21 +72,6 @@ export const THRESHOLD_OPERATORS: Array<{ value: SocOperator; label: string }> =
     { value: "gte", label: "Rises to / above (≥)" },
   ]
 
-/** First threshold of each direction (`limitThresholds`). */
-export function limitThresholds<
-  T extends { operator: SocOperator; value: number },
->(thresholds: T[]) {
-  const seen = new Set<SocOperator>()
-  const next: T[] = []
-  for (const entry of thresholds) {
-    if (entry.operator !== "lte" && entry.operator !== "gte") continue
-    if (seen.has(entry.operator)) continue
-    seen.add(entry.operator)
-    next.push(entry)
-  }
-  return next
-}
-
 // ── Fields ───────────────────────────────────────────────────────────────
 
 /** On/off switches posted as booleans in `data`. */
@@ -120,7 +105,7 @@ const NUMBERS = [
   "load_threshold_value",
 ] as const
 
-type SwitchKey = (typeof SWITCHES)[number]
+export type SwitchKey = (typeof SWITCHES)[number]
 type NumberKey = (typeof NUMBERS)[number]
 
 /**
@@ -139,9 +124,7 @@ const numericText = z.string().trim().refine(isNumeric, "Enter a number")
 const socSchema = z.object({
   email_enabled: z.boolean(),
   push_enabled: z.boolean(),
-  schedule_times: z.array(
-    z.object({ time: z.string(), days: z.array(z.number()) })
-  ),
+  schedule_times: z.array(z.object({ time: z.string() })),
   thresholds: z.array(
     z.object({ operator: z.enum(["lte", "gte"]), value: z.number() })
   ),
@@ -261,16 +244,17 @@ export function toFormValues(
         data.daily_battery_soc_alerts ?? soc?.email_enabled
       ),
       push_enabled: Boolean(soc?.push_enabled),
+      // Every time now uses the operational days, so per-time weekdays are
+      // not read. Times and thresholds beyond the new limits (set up before
+      // them) are kept and shown, not dropped: the live page drops them
+      // silently and the next save deletes them (inventory 07 §9.5).
       schedule_times: (soc?.schedule_times ?? [])
-        .map((t) => ({ time: toTime(t.time), days: parseDays(t.days_of_week) }))
-        .sort((a, b) => a.time.localeCompare(b.time))
-        .slice(0, MAX_SCHEDULE_TIMES),
-      thresholds: limitThresholds(
-        (soc?.thresholds ?? []).map((t) => ({
-          operator: t.operator,
-          value: Number(t.value),
-        }))
-      ),
+        .map((t) => ({ time: toTime(t.time) }))
+        .sort((a, b) => a.time.localeCompare(b.time)),
+      thresholds: (soc?.thresholds ?? []).map((t) => ({
+        operator: t.operator,
+        value: Number(t.value),
+      })),
     },
   }
 }
@@ -306,23 +290,23 @@ export function toPayload(
 
   if (response?.battery_soc_config) {
     const { email_enabled, schedule_times, thresholds } = values.soc
+    // Push has no switch on the page, so it keeps the server's value. The
+    // live page posts `push_enabled: false`, which turns push off on every
+    // save (inventory 07 §9.5); the spec says it must not be switched off.
+    const push_enabled = Boolean(response.battery_soc_config.push_enabled)
     data.daily_battery_soc_alerts = email_enabled
     payload.battery_soc_config = {
-      is_enabled: email_enabled,
-      push_enabled: false,
+      is_enabled: email_enabled || push_enabled,
+      push_enabled,
       email_enabled,
-      // Live page: every status time uses the operational days, push is not a
-      // separate switch, and the lists are capped at two times and one of
-      // each direction (composeAlertPayload / buildScheduleTimePayload).
-      schedule_times: schedule_times
-        .slice(0, MAX_SCHEDULE_TIMES)
-        .map(({ time }) => {
-          const csv = daysToCsv(values.daily_energy_usage_days)
-          return csv === DEFAULT_DAYS_CSV
-            ? { time }
-            : { time, days_of_week: csv }
-        }),
-      thresholds: limitThresholds(thresholds).map(({ operator, value }) => ({
+      // As on the live page every status time uses the operational days. The
+      // limits (two times, one drop and one rise) apply to adding entries;
+      // older extras are sent back until the user removes them.
+      schedule_times: schedule_times.map(({ time }) => {
+        const csv = daysToCsv(values.daily_energy_usage_days)
+        return csv === DEFAULT_DAYS_CSV ? { time } : { time, days_of_week: csv }
+      }),
+      thresholds: thresholds.map(({ operator, value }) => ({
         operator,
         value,
       })),
@@ -352,4 +336,82 @@ export function formatAlertsError(body: unknown): string {
     if (nested) return nested
   }
   return typeof message === "string" ? message : fallback
+}
+
+// ── Save model (live page, inventory 07 §9.1) ─────────────────────────────
+// Switches save on their own as soon as they are flipped. Days, battery
+// times and thresholds, and the numeric limits are drafts until "Save".
+
+/** A switch that saves on its own; the battery email lives under `soc`. */
+export type SwitchName = SwitchKey | "soc.email_enabled"
+
+export const switchValue = (values: AlertsFormValues, name: SwitchName) =>
+  name === "soc.email_enabled" ? values.soc.email_enabled : values[name]
+
+export function withSwitch(
+  values: AlertsFormValues,
+  name: SwitchName,
+  checked: boolean
+): AlertsFormValues {
+  return name === "soc.email_enabled"
+    ? { ...values, soc: { ...values.soc, email_enabled: checked } }
+    : { ...values, [name]: checked }
+}
+
+/** Comparable form of the draft fields (`hasSaveableChanges`): blank equals
+ * blank, numbers compare by value. */
+export function draftKey(values: AlertsFormValues) {
+  return JSON.stringify({
+    days: daysToCsv(values.daily_energy_usage_days),
+    times: values.soc.schedule_times.map((t) => t.time),
+    thresholds: values.soc.thresholds.map((t) => [t.operator, Number(t.value)]),
+    limits: NUMBERS.map((key) => {
+      const text = values[key].trim()
+      return text === "" ? "" : Number(text)
+    }),
+  })
+}
+
+/** `values` with its draft fields taken from `from` (Discard). */
+export function withDrafts(
+  values: AlertsFormValues,
+  from: AlertsFormValues
+): AlertsFormValues {
+  return {
+    ...values,
+    ...(Object.fromEntries(NUMBERS.map((k) => [k, from[k]])) as Record<
+      NumberKey,
+      string
+    >),
+    daily_energy_usage_days: from.daily_energy_usage_days,
+    soc: {
+      ...values.soc,
+      schedule_times: from.soc.schedule_times,
+      thresholds: from.soc.thresholds,
+    },
+  }
+}
+
+/** The GET response as it stands after `payload` was saved, for the cache. */
+export function withSavedPayload(
+  response: AlertsResponse,
+  payload: AlertsSavePayload
+): AlertsResponse {
+  const soc = response.battery_soc_config
+  const sent = payload.battery_soc_config
+  return {
+    ...response,
+    data: { ...response.data, ...payload.data } as AlertsData,
+    battery_soc_config:
+      soc && sent
+        ? {
+            ...soc,
+            ...sent,
+            schedule_times: sent.schedule_times.map((t) => ({
+              time: t.time,
+              days_of_week: t.days_of_week ?? DEFAULT_DAYS_CSV,
+            })),
+          }
+        : soc,
+  }
 }

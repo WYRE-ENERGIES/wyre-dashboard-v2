@@ -23,6 +23,9 @@ import { periodicWeek, type ReportWeek } from "@/lib/report/week"
  */
 export const REPORT_TYPE_BY_KIND: Record<PeriodKind, ReportType> = {
   day: "daily",
+  // A range of days picked in the global Day view is a Periodic report
+  // over exactly those days (see periodicWeek).
+  range: "periodic",
   month: "monthly",
   year: "periodic",
 }

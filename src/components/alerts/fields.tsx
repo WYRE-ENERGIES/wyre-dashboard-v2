@@ -6,7 +6,7 @@ import { Controller, useFormContext, type FieldPath } from "react-hook-form"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import type { AlertsFormValues } from "@/lib/alerts/form"
+import type { AlertsFormValues, SwitchName } from "@/lib/alerts/form"
 import { cn } from "@/lib/utils"
 
 type BooleanField = {
@@ -16,6 +16,11 @@ type BooleanField = {
 type TextField = {
   [K in keyof AlertsFormValues]: AlertsFormValues[K] extends string ? K : never
 }[keyof AlertsFormValues]
+
+/** Saves one switch as soon as it is flipped (see AlertsForm). */
+export const SwitchSaveContext = React.createContext<
+  ((name: SwitchName, checked: boolean) => void) | null
+>(null)
 
 /** One alert: title and explanation on the left, its on/off switch on the
  * right, threshold inputs (children) underneath. */
@@ -39,6 +44,7 @@ export function AlertRow({
 }) {
   const id = React.useId()
   const { control } = useFormContext<AlertsFormValues>()
+  const saveSwitch = React.useContext(SwitchSaveContext)
   return (
     <div
       id={rowId}
@@ -65,7 +71,10 @@ export function AlertRow({
                 id={id}
                 className="mt-0.5"
                 checked={field.value}
-                onCheckedChange={(checked) => field.onChange(checked)}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked)
+                  saveSwitch?.(name, checked)
+                }}
                 onBlur={field.onBlur}
               />
             )}

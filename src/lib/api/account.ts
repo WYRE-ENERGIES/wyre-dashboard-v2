@@ -1,6 +1,4 @@
 import { apiRequest } from "@/lib/api/client"
-import { DEMO } from "@/lib/demo"
-import { demoAccount } from "@/lib/demo-data/account"
 
 /**
  * Change password while signed in: POST reset_password/ with the bearer
@@ -13,9 +11,7 @@ export const changePassword = (
   oldPassword: string,
   newPassword: string
 ) =>
-  DEMO
-    ? demoAccount.changePassword(oldPassword)
-    : apiRequest<{ message?: string }>("reset_password/", {
-        method: "POST",
-        body: { username, password: oldPassword, new_password: newPassword },
-      })
+  apiRequest<{ message?: string }>("reset_password/", {
+    method: "POST",
+    body: { username, password: oldPassword, new_password: newPassword },
+  })

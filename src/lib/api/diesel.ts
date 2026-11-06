@@ -19,8 +19,6 @@ import type {
   RawMonthlyEnergy,
   RawRuntimeFuel,
 } from "@/lib/api/diesel-types"
-import { DEMO } from "@/lib/demo"
-import { demoDiesel } from "@/lib/demo-data/diesel"
 
 // Diesel Overview endpoints (inventory 06 §2.11, #81–#89), used as they are:
 // the branch is a path segment and the period is `?month=&year=`. The page
@@ -43,15 +41,8 @@ function unwrap<T>(body: unknown): T | undefined {
   return body as T | undefined
 }
 
-/** Demo mode returns the same raw shapes, so both go through `unwrap`. */
-async function get<T>(
-  path: string,
-  demo: () => Promise<unknown>,
-  signal?: AbortSignal
-) {
-  return unwrap<T>(
-    DEMO ? await demo() : await apiRequest<unknown>(path, { signal })
-  )
+async function get<T>(path: string, signal?: AbortSignal) {
+  return unwrap<T>(await apiRequest<unknown>(path, { signal }))
 }
 
 const ref = (g: { name?: string; device_id?: number }) => ({
@@ -68,7 +59,6 @@ export async function getGeneratorsStatus(
 ): Promise<GeneratorStatus[]> {
   const body = await get<RawGeneratorsStatus>(
     `branch/${branchId}/generators-status/`,
-    () => demoDiesel.generatorsStatus(),
     signal
   )
   return (body?.generators ?? []).map((g) => ({
@@ -84,7 +74,6 @@ export async function getDieselPrice(
 ): Promise<DieselPrice> {
   const body = await get<RawDieselPrice>(
     `branch/${branchId}/diesel-price/`,
-    () => demoDiesel.dieselPrice(),
     signal
   )
   return {
@@ -102,7 +91,6 @@ export async function getGeneratorsCo2(
 ) {
   const body = await get<RawCo2>(
     `branch/${branchId}/generators-co2/${query(my)}`,
-    () => demoDiesel.co2(my),
     signal
   )
   return num(body?.total_co2_tonnes)
@@ -115,7 +103,6 @@ export async function getGeneratorsMonthlyEnergy(
 ): Promise<GeneratorEnergy[]> {
   const body = await get<RawMonthlyEnergy>(
     `branch/${branchId}/generators-monthly-energy/${query(my)}`,
-    () => demoDiesel.monthlyEnergy(my),
     signal
   )
   return (body?.generators ?? []).map((g) => ({
@@ -131,7 +118,6 @@ export async function getGeneratorRuntimeFuel(
 ): Promise<GeneratorRuntimeFuel[]> {
   const body = await get<RawRuntimeFuel>(
     `branch/${branchId}/generator-runtime-fuel-usage/${query(my)}`,
-    () => demoDiesel.runtimeFuel(my),
     signal
   )
   return (body?.generators ?? []).map((g) => ({
@@ -149,7 +135,6 @@ export async function getGeneratorEnergyFuelSeries(
 ): Promise<GeneratorSeries[]> {
   const body = await get<RawEnergyFuelSeries>(
     `branch/${branchId}/generator-energy-fuel-series/${query(my, "&frequency=daily")}`,
-    () => demoDiesel.energyFuelSeries(my),
     signal
   )
   return (Array.isArray(body) ? body : []).map((g) => ({
@@ -172,7 +157,6 @@ export async function getFuelUsageSeries(
 ): Promise<FuelUsagePoint[]> {
   const body = await get<RawFuelUsageSeries>(
     `branch/${branchId}/fuel-usage-series/${query(my, "&frequency=daily")}`,
-    () => demoDiesel.fuelUsageSeries(my),
     signal
   )
   return (body?.series ?? [])
@@ -191,7 +175,6 @@ export async function getGeneratorMetrics(
 ): Promise<GeneratorMetrics> {
   const body = await get<RawGeneratorMetrics>(
     `branch/${branchId}/generator-metrics/${query(my)}`,
-    () => demoDiesel.generatorMetrics(my),
     signal
   )
   return {
@@ -213,7 +196,6 @@ export async function getCostMetrics(
 ): Promise<CostMetrics> {
   const body = await get<RawCostMetrics>(
     `branch/${branchId}/cost-metrics/${query(my)}`,
-    () => demoDiesel.costMetrics(my),
     signal
   )
   return {
