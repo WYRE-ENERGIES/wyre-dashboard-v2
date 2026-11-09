@@ -1,6 +1,4 @@
 import { apiRequest } from "@/lib/api/client"
-import { DEMO } from "@/lib/demo"
-import { demoBreakers } from "@/lib/demo-data/breakers"
 
 /**
  * ACB breakers (remote switching). Shapes inferred from the old, never-routed
@@ -29,7 +27,6 @@ export async function getBreakers(
   branchId: number,
   signal?: AbortSignal
 ): Promise<Breaker[]> {
-  if (DEMO) return demoBreakers.list(branchId)
   const response = await apiRequest<BreakersResponse>(`all_acb/${branchId}/`, {
     signal,
   })
@@ -43,9 +40,7 @@ export const toggleBreaker = (
   deviceId: number,
   state: BreakerState
 ) =>
-  DEMO
-    ? demoBreakers.toggle(branchId, deviceId, state)
-    : apiRequest<unknown>("toggle_acb/", {
-        method: "POST",
-        body: { state, meter_id: deviceId },
-      })
+  apiRequest<unknown>("toggle_acb/", {
+    method: "POST",
+    body: { state, meter_id: deviceId },
+  })

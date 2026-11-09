@@ -27,7 +27,7 @@ import {
   shapeGeneratorSeries,
   sumNumbers,
 } from "@/lib/diesel/metrics"
-import { serializePeriod } from "@/lib/period"
+import { isDayView, serializePeriod } from "@/lib/period"
 
 /** Fetch one month-based endpoint for every month the period needs. */
 const perMonth = <T>(
@@ -71,8 +71,8 @@ export function useDieselData() {
           getGeneratorsMonthlyEnergy(branchId, my, signal)
         )
       ),
-    // A Day shows that day's kWh from the daily series instead.
-    enabled: period.kind !== "day",
+    // A day or range shows its kWh from the daily series instead.
+    enabled: !isDayView(period),
   })
   const runtimeFuel = useQuery({
     queryKey: ["diesel", "generator-runtime-fuel-usage", ...key],

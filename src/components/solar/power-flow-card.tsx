@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { CardError, InfoHint } from "@/components/shared/card-parts"
+import { LegacyPowerFlow } from "@/components/solar/legacy-power-flow"
 import {
   Card,
   CardAction,
@@ -21,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { FlowDirection, SolarLive } from "@/lib/api/solar-types"
 import { formatNumber } from "@/lib/format"
 import {
@@ -57,14 +59,15 @@ const LAYOUTS: Record<
   { viewBox: string; nodes: Record<NodeKey, Point> }
 > = {
   wide: {
-    viewBox: "0 0 720 430",
+    // Wider than tall so the side nodes sit well apart from the hub.
+    viewBox: "0 0 960 430",
     nodes: {
-      production: { x: 360, y: 205, r: 56 },
-      capacity: { x: 110, y: 60, r: 36 },
-      generator: { x: 110, y: 205, r: 28 },
-      battery: { x: 110, y: 345, r: 36 },
-      grid: { x: 610, y: 60, r: 36 },
-      usage: { x: 610, y: 345, r: 36 },
+      production: { x: 480, y: 205, r: 56 },
+      capacity: { x: 130, y: 60, r: 36 },
+      generator: { x: 130, y: 205, r: 28 },
+      battery: { x: 130, y: 345, r: 36 },
+      grid: { x: 830, y: 60, r: 36 },
+      usage: { x: 830, y: 345, r: 36 },
     },
   },
   tall: {
@@ -113,7 +116,9 @@ function buildNodes(live: SolarLive): FlowNode[] {
       key: "usage",
       label: "Usage",
       value: `${formatNumber(live.load.kw)} kW`,
-      color: "var(--chart-2)",
+      // Node colours follow the old dashboard: purple capacity, yellow
+      // production, blue grid, green battery, red usage.
+      color: "var(--destructive)",
       Icon: FactoryIcon,
       direction: live.load.direction,
     },
@@ -124,7 +129,7 @@ function buildNodes(live: SolarLive): FlowNode[] {
       label: "Battery",
       // Shown as a magnitude; the status says which way it flows.
       value: `${formatNumber(Math.abs(live.battery.kw))} kW`,
-      color: "var(--chart-4)",
+      color: "var(--success)",
       Icon: BatteryMediumIcon,
       percent: live.battery.percent,
       status: batteryStatus(live.battery.direction, live.battery.kw),
@@ -145,6 +150,62 @@ function buildNodes(live: SolarLive): FlowNode[] {
     })
   }
   return nodes
+}
+
+/** The inverter drawn at the hub (old FlowDiagram): an amber cabinet with a
+ * display slot and a status light, centred on (cx, cy). Colours come from
+ * the --hub-* theme tokens. */
+function InverterIcon({
+  cx,
+  cy,
+  size,
+}: {
+  cx: number
+  cy: number
+  size: number
+}) {
+  const s = size / 24
+  return (
+    <g
+      transform={`translate(${cx - size / 2} ${cy - size / 2}) scale(${s})`}
+      aria-hidden
+    >
+      <rect
+        x={5.5}
+        y={1.5}
+        width={13}
+        height={21}
+        rx={2.5}
+        fill="color-mix(in oklch, var(--hub-line) 28%, transparent)"
+        stroke="var(--hub-line)"
+        strokeWidth={1.2}
+      />
+      <path
+        d="M8 2v20M16 2v20"
+        stroke="var(--hub-line)"
+        strokeOpacity={0.35}
+        strokeWidth={0.8}
+      />
+      <rect
+        x={9}
+        y={8}
+        width={6}
+        height={2.2}
+        rx={1.1}
+        fill="var(--hub-slot)"
+      />
+      <rect
+        x={8.6}
+        y={15.5}
+        width={2.6}
+        height={2}
+        rx={0.4}
+        fill="none"
+        stroke="var(--hub-line)"
+        strokeWidth={0.8}
+      />
+    </g>
+  )
 }
 
 /** A curved connector from a node's edge to the centre node's edge. */
@@ -238,10 +299,14 @@ function Diagram({
               cx={p.x}
               cy={p.y}
               r={p.r}
-              stroke={n.color}
+              // The hub, as on the old dashboard: solid yellow, amber edge.
+              stroke={n.key === "production" ? "var(--hub-line)" : n.color}
               strokeWidth={2}
               style={{
-                fill: `color-mix(in oklch, ${n.color} 16%, var(--card))`,
+                fill:
+                  n.key === "production"
+                    ? "var(--hub-fill)"
+                    : `color-mix(in oklch, ${n.color} 16%, var(--card))`,
               }}
             />
             {n.percent !== undefined && (
@@ -258,19 +323,19 @@ function Diagram({
                 opacity={0.75}
               />
             )}
-            <n.Icon
-              x={p.x - iconSize / 2}
-              y={p.y - iconSize / 2}
-              width={iconSize}
-              height={iconSize}
-              color={
-                n.color === "var(--chart-5)"
-                  ? "var(--highlight-foreground)"
-                  : n.color
-              }
-              strokeWidth={1.75}
-              aria-hidden
-            />
+            {n.key === "production" ? (
+              <InverterIcon cx={p.x} cy={p.y} size={p.r * 1.45} />
+            ) : (
+              <n.Icon
+                x={p.x - iconSize / 2}
+                y={p.y - iconSize / 2}
+                width={iconSize}
+                height={iconSize}
+                color={n.color}
+                strokeWidth={1.75}
+                aria-hidden
+              />
+            )}
             {n.on !== undefined && (
               <g
                 transform={`translate(${p.x + p.r * 0.45}, ${p.y - p.r - 12})`}
@@ -279,14 +344,14 @@ function Diagram({
                   width={34}
                   height={17}
                   rx={8.5}
-                  fill={n.on ? "var(--primary)" : "var(--destructive)"}
+                  fill={n.on ? "var(--success)" : "var(--destructive)"}
                 />
                 <text
                   x={17}
                   y={12.5}
                   textAnchor="middle"
                   className="text-[10px] font-bold"
-                  fill="var(--primary-foreground)"
+                  fill={n.on ? "var(--success-foreground)" : "white"}
                 >
                   {n.on ? "ON" : "OFF"}
                 </text>
@@ -306,7 +371,8 @@ function Diagram({
                   x={p.x}
                   y={p.y - p.r - 10}
                   textAnchor="middle"
-                  className="fill-foreground text-sm font-semibold"
+                  className="text-sm font-semibold"
+                  fill="var(--hub-line)"
                 >
                   {n.value}
                 </text>
@@ -355,7 +421,8 @@ export function PowerFlowCard({ live }: { live: UseQueryResult<SolarLive> }) {
             Moving dots show which way power is flowing right now. Capacity
             shows how much of the installed panel capacity is producing; the
             battery ring shows its state of charge. The generator appears only
-            while it is on.
+            while it is on. &ldquo;Current dashboard&rdquo; shows the same
+            readings drawn the way dashboard.wyreng.com draws them today.
           </InfoHint>
         </CardAction>
       </CardHeader>
@@ -365,14 +432,25 @@ export function PowerFlowCard({ live }: { live: UseQueryResult<SolarLive> }) {
         ) : live.isError || !live.data ? (
           <CardError onRetry={() => live.refetch()} />
         ) : (
-          <>
-            <div className="mx-auto hidden max-w-3xl sm:block">
-              <Diagram live={live.data} layout="wide" />
-            </div>
-            <div className="mx-auto max-w-sm sm:hidden">
-              <Diagram live={live.data} layout="tall" />
-            </div>
-          </>
+          // "Current dashboard" is the old diagram, kept for design review
+          // against the new one; drop the tabs once the design is signed off.
+          <Tabs defaultValue="ours" className="gap-4">
+            <TabsList aria-label="Diagram version">
+              <TabsTrigger value="ours">Ours</TabsTrigger>
+              <TabsTrigger value="current">Current dashboard</TabsTrigger>
+            </TabsList>
+            <TabsContent value="ours">
+              <div className="mx-auto hidden max-w-5xl sm:block">
+                <Diagram live={live.data} layout="wide" />
+              </div>
+              <div className="mx-auto max-w-sm sm:hidden">
+                <Diagram live={live.data} layout="tall" />
+              </div>
+            </TabsContent>
+            <TabsContent value="current">
+              <LegacyPowerFlow live={live.data} />
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

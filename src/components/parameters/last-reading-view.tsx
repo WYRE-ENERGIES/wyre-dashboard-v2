@@ -35,14 +35,11 @@ import {
   readingCsvRows,
   readingLabel,
   readingSections,
+  readingTime,
   readingUnit,
   type ReadingSection,
 } from "@/lib/parameters/last-reading"
-import {
-  branchDevices,
-  filterParamDevices,
-  parseApiDate,
-} from "@/lib/parameters/series"
+import { branchDevices, filterParamDevices } from "@/lib/parameters/series"
 import { periodStart } from "@/lib/period"
 
 /**
@@ -132,7 +129,7 @@ function DeviceReading({
   fileTag: string[]
 }) {
   const name = formatDeviceName(device.name)
-  const takenAt = parseApiDate(device.last_reading?.date)
+  const takenAt = readingTime(device.last_reading?.date)
   const sections = readingSections(device)
 
   const exportCsv = () =>

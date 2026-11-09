@@ -40,21 +40,9 @@ Open [http://localhost:3000](http://localhost:3000). It redirects to `/login`.
 
 To use another port: `npm run dev -- -p 3100`.
 
-### Demo mode or real backend
+### Signing in
 
-`.env.example` turns on **demo mode**, so the app runs with no backend and no real account.
-
-| | Demo mode (`NEXT_PUBLIC_WYRE_DEMO=1`) | Real backend (unset or `0`) |
-| --- | --- | --- |
-| Data | Generated sample data for three demo branches | Live data from the Wyre API |
-| Sign in | Any username and password | Your Wyre credentials |
-| Branch switching | Switches between demo branches | Swaps the session token, like the old app |
-
-Demo shortcuts for testing:
-
-- **Sign-in error:** use the password `wrong`.
-- **Reset link expired or invalid:** open `/confirm-reset-password?token=expired` or `?token=invalid`. Any other token shows the new-password form.
-- **Getting back to the auth pages:** sign out from the user menu at the bottom of the sidebar.
+The app runs against the live Wyre backend. Sign in with your Wyre account; branch switching swaps the session token, like the old app. To get back to the sign-in page, sign out from the user menu at the bottom of the sidebar.
 
 `NEXT_PUBLIC_*` variables are read at build time, so restart `npm run dev` after changing them.
 
@@ -62,7 +50,6 @@ Demo shortcuts for testing:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_WYRE_DEMO` | unset | `1` turns on demo mode |
 | `WYRE_BACKEND_URL` | `https://backend.wyreng.com` | Backend the server-side proxy forwards `/api/*` to |
 | `NEXT_PUBLIC_WYRE_MEDIA_URL` | `https://backend.wyreng.com` | Host for media paths returned by the API, such as client logos |
 
@@ -106,7 +93,6 @@ src/
     period.ts          Period model, granularity rule, date formats for the API
     gating.ts          Which features a user sees (role, client type, products)
     dashboard/         Dashboard business rules and chart colours
-    demo.ts            Demo mode data and auth
     format.ts          Number, money and hours formatting
 ```
 
@@ -119,7 +105,7 @@ Route groups such as `(auth)` and `(main-pages)` organise layouts and don't appe
 
 Every page reads the same filters from the top bar:
 
-- **Period:** Day, Month or Year, calendar periods only, at most one year per view. The period sets the data granularity: a day shows hourly data, a month daily data, a year monthly data. It's kept in the URL (`?view=month&date=2026-10`) so views can be bookmarked.
+- **Period:** Day, Month or Year, calendar periods only, at most one year per view. Under Day you can also pick a range of up to 30 days (click a first and a last day). The period sets the data granularity: a day shows hourly data, a range or a month daily data, a year monthly data. It's kept in the URL (`?view=month&date=2026-10`, or `?view=range&date=2026-10-20..2026-11-01`) so views can be bookmarked. On the Report page a range gives a Periodic report for those days.
 - **Devices:** an optional device subset within the current branch. Selecting none means all devices.
 - **Branch:** switched from the sidebar.
 
@@ -147,6 +133,6 @@ Dark mode is in the user menu.
 ## Adding a page
 
 1. Create `src/app/(main-pages)/<route>/page.tsx`. It gets the sidebar and filters automatically.
-2. Add typed endpoint calls in `src/lib/api/endpoints.ts`, with a demo version in `src/lib/demo.ts` if it should work in demo mode.
+2. Add typed endpoint calls in `src/lib/api/` (shared ones in `endpoints.ts`).
 3. Read the filters with `useFilters()` and the user with `useClaims()`.
 4. Set `ready: true` for its sidebar item in `src/components/app-sidebar.tsx`.

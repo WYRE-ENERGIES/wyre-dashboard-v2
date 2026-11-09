@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { ApiError } from "@/lib/api/client"
 import { login } from "@/lib/api/endpoints"
-import { DEMO } from "@/lib/demo"
 
 /** Only allow same-app redirects after sign-in. */
 function safeRedirect(from: string | null) {
@@ -102,12 +101,6 @@ export function LoginForm() {
             {pending && <Spinner />}
             {pending ? "Signing in…" : "Sign in"}
           </Button>
-          {DEMO && (
-            <p className="rounded-xl bg-highlight/20 px-3 py-2 text-xs text-highlight-foreground dark:text-highlight">
-              Demo mode: any username and password signs in. Use the password{" "}
-              <code className="font-mono">wrong</code> to see the error state.
-            </p>
-          )}
         </FieldGroup>
       </form>
     </>

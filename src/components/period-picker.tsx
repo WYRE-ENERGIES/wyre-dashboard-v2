@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import {
+  addDays,
   addYears,
   format,
   isAfter,
@@ -25,7 +26,10 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
+  dayRange,
+  isDayView,
   isFuturePeriod,
+  MAX_RANGE_DAYS,
   periodEnd,
   periodLabel,
   periodShortLabel,
@@ -60,17 +64,39 @@ function convert(period: Period, kind: PeriodKind): Period {
 export function PeriodPicker() {
   const { period, setPeriod } = useFilters()
   const [open, setOpen] = React.useState(false)
+  // First day of a range being picked: the second click completes it.
+  const [rangeFrom, setRangeFrom] = React.useState<Date | null>(null)
   const next = shiftPeriod(period, 1)
+  const kind = isDayView(period) ? "day" : period.kind
 
+  const onOpenChange = (value: boolean) => {
+    setOpen(value)
+    setRangeFrom(null)
+  }
   const choose = (p: Period) => {
     setPeriod(p)
-    setOpen(false)
+    onOpenChange(false)
+  }
+  // One click shows that day and waits for an optional second day; the
+  // second click makes the range (up to MAX_RANGE_DAYS) and closes.
+  const pickDay = (date: Date) => {
+    if (rangeFrom) {
+      choose(dayRange(rangeFrom, date))
+      return
+    }
+    setPeriod(dayRange(date))
+    setRangeFrom(date)
   }
 
   const now = new Date()
   const shortcuts: Array<{ label: string; period: Period }> = [
     { label: "Today", period: { kind: "day", anchor: now } },
     { label: "Yesterday", period: { kind: "day", anchor: subDays(now, 1) } },
+    { label: "Last 7 days", period: dayRange(subDays(now, 6), now) },
+    {
+      label: `Last ${MAX_RANGE_DAYS} days`,
+      period: dayRange(subDays(now, MAX_RANGE_DAYS - 1), now),
+    },
     {
       label: "This month",
       period: { kind: "month", anchor: startOfMonth(now) },
@@ -88,10 +114,10 @@ export function PeriodPicker() {
         variant="outline"
         size="sm"
         spacing={0}
-        value={[period.kind]}
+        value={[kind]}
         onValueChange={(values: string[]) => {
-          const kind = values[0] as PeriodKind | undefined
-          if (kind && kind !== period.kind) setPeriod(convert(period, kind))
+          const picked = values[0] as PeriodKind | undefined
+          if (picked && picked !== kind) setPeriod(convert(period, picked))
         }}
         aria-label="Period type"
       >
@@ -116,7 +142,7 @@ export function PeriodPicker() {
         >
           <ChevronLeftIcon />
         </Button>
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={onOpenChange}>
           <PopoverTrigger
             render={
               <Button
@@ -144,10 +170,14 @@ export function PeriodPicker() {
                     size="sm"
                     className="justify-start"
                     onClick={() =>
-                      choose({
-                        kind: s.period.kind,
-                        anchor: periodStart(s.period),
-                      })
+                      choose(
+                        s.period.kind === "range"
+                          ? s.period
+                          : {
+                              kind: s.period.kind,
+                              anchor: periodStart(s.period),
+                            }
+                      )
                     }
                   >
                     {s.label}
@@ -155,16 +185,38 @@ export function PeriodPicker() {
                 ))}
               </div>
               <div className="p-1">
-                {period.kind === "day" && (
-                  <Calendar
-                    mode="single"
-                    selected={period.anchor}
-                    defaultMonth={period.anchor}
-                    onSelect={(date) =>
-                      date && choose({ kind: "day", anchor: date })
-                    }
-                    disabled={{ after: now }}
-                  />
+                {kind === "day" && (
+                  <div className="flex flex-col">
+                    <Calendar
+                      mode="range"
+                      selected={
+                        rangeFrom
+                          ? { from: rangeFrom, to: undefined }
+                          : {
+                              from: period.anchor,
+                              to: period.end ?? period.anchor,
+                            }
+                      }
+                      defaultMonth={period.anchor}
+                      onSelect={(_range, day) => pickDay(day)}
+                      disabled={[
+                        { after: now },
+                        ...(rangeFrom
+                          ? [
+                              { after: addDays(rangeFrom, MAX_RANGE_DAYS - 1) },
+                              {
+                                before: subDays(rangeFrom, MAX_RANGE_DAYS - 1),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                    <p className="max-w-64 px-3 pb-2 text-xs text-muted-foreground">
+                      {rangeFrom
+                        ? `Pick an end day for a range of up to ${MAX_RANGE_DAYS} days, or close to keep this day.`
+                        : `Pick a day, then a second day for a range of up to ${MAX_RANGE_DAYS} days.`}
+                    </p>
+                  </div>
                 )}
                 {period.kind === "month" && (
                   <MonthGrid period={period} onSelect={choose} />

@@ -1,8 +1,5 @@
 import {
   differenceInCalendarDays,
-  endOfDay,
-  endOfMonth,
-  endOfYear,
   format,
   isValid,
   parse,
@@ -16,7 +13,12 @@ import type {
   ScoreCardDevice,
   ScoreCardResponse,
 } from "@/lib/api/score-card-types"
-import { periodEnd, periodStart, type Period } from "@/lib/period"
+import {
+  periodEnd,
+  periodFullEnd,
+  periodStart,
+  type Period,
+} from "@/lib/period"
 
 /**
  * Score Card business rules, ported from the old app:
@@ -71,12 +73,7 @@ export function scoreCardDevices(
 export function periodPace(period: Period, now = new Date()) {
   const start = periodStart(period)
   const end = periodEnd(period, now)
-  const fullEnd =
-    period.kind === "day"
-      ? endOfDay(start)
-      : period.kind === "month"
-        ? endOfMonth(start)
-        : endOfYear(start)
+  const fullEnd = periodFullEnd(period)
   const complete = end.getTime() >= fullEnd.getTime()
 
   if (period.kind === "day") {
@@ -231,12 +228,18 @@ export function generatorSizeEfficiency(devices: ScoreCardDevice[]) {
     .filter((g): g is GeneratorSizeEfficiency => g?.is_gen === true)
     .map((g) => {
       const usage = num(g.usage)
+      // With no rated size on record the backend reports 100 % "overloaded";
+      // that says nothing about the generator, so say what's missing.
+      const sizeMissing = num(g.gen_size) <= 0
       return {
         name: g.name ?? "",
         size: g.size ?? "",
         usage,
         unit: g.unit || "%",
-        ...generatorSizeRating(usage),
+        sizeMissing,
+        ...(sizeMissing
+          ? { message: "Generator size not set", tone: "fair" as Tone }
+          : generatorSizeRating(usage)),
       }
     })
 }

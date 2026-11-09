@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card"
 import { selectGenerators } from "@/lib/diesel/metrics"
 import { formatDeviceName, formatNaira, formatNumber } from "@/lib/format"
+import { isDayView } from "@/lib/period"
 import { cn } from "@/lib/utils"
 
 /** Old DieselHeader.js: generator state, CO₂, diesel price block. */
@@ -106,7 +107,7 @@ export function DieselHeaderCards({ data }: { data: DieselData }) {
           <CardAction>
             <InfoHint>
               Carbon dioxide released by the generators.{" "}
-              {data.period.kind === "day" && MONTH_ONLY_HINT} {BRANCH_WIDE_HINT}
+              {isDayView(data.period) && MONTH_ONLY_HINT} {BRANCH_WIDE_HINT}
             </InfoHint>
           </CardAction>
         </CardHeader>

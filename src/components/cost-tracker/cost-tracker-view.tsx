@@ -76,7 +76,7 @@ export function CostTrackerView() {
     <>
       <PageHeader
         title="Cost Tracker"
-        description={`${reseller ? "Diesel, utility and IPP" : "Diesel and utility"} costs for ${periodText}${period.kind === "day" ? " (cost data is monthly, so a day shows its month)" : ""}`}
+        description={`${reseller ? "Diesel, utility and IPP" : "Diesel and utility"} costs for ${periodText}${period.kind === "day" ? " (cost data is monthly, so a day shows its month)" : period.kind === "range" ? " (cost data is monthly, so days show their months)" : ""}`}
         actions={
           <>
             {operator && (

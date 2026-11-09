@@ -9,11 +9,13 @@ import {
   type Period,
   type PeriodKind,
 } from "@/lib/period"
+import { periodicWeek, type ReportWeek } from "@/lib/report/week"
 
 /**
- * Inventory §8 ("Report fits the same picker"): the report type follows the
- * global period. Day → Daily report, Month → Monthly report, Year → Periodic
- * report for that year. There are no page-level date pickers.
+ * The report type follows the global period. Day → Daily, Month → Monthly.
+ * Year still opens the Periodic tab. That report uses the range the user
+ * entered; opening the tab starts on the Monday–Sunday week containing
+ * today, which they can replace with any start and end.
  *
  * Old Report.js kept one `reportContext` across tabs and didn't clear it, so
  * the Daily tab could preview a stale monthly report. Here the request is a
@@ -21,6 +23,9 @@ import {
  */
 export const REPORT_TYPE_BY_KIND: Record<PeriodKind, ReportType> = {
   day: "daily",
+  // A range of days picked in the global Day view is a Periodic report
+  // over exactly those days (see periodicWeek).
+  range: "periodic",
   month: "monthly",
   year: "periodic",
 }
@@ -37,27 +42,36 @@ export const REPORT_TYPE_LABEL: Record<ReportType, string> = {
   periodic: "Periodic",
 }
 
-export function reportRequest(period: Period, branchId: number): ReportRequest {
-  if (period.kind === "day") {
+export function reportRequest(
+  period: Period,
+  branchId: number,
+  type: ReportType = REPORT_TYPE_BY_KIND[period.kind],
+  range?: ReportWeek
+): ReportRequest {
+  if (type === "daily") {
+    const day =
+      period.kind === "day" ? period : periodForReportType(period, "daily")
     return {
       report_type: "daily",
       branch_id: branchId,
-      date: isoDate(periodStart(period)),
+      date: isoDate(periodStart(day)),
     }
   }
-  if (period.kind === "month") {
+  if (type === "monthly") {
+    const month =
+      period.kind === "month" ? period : periodForReportType(period, "monthly")
     return {
       report_type: "monthly",
       branch_id: branchId,
-      ...periodMonthYear(period),
+      ...periodMonthYear(month),
     }
   }
-  // A Year runs 1 Jan → 31 Dec, or → today for the current year.
+  const week = range ?? periodicWeek(period)
   return {
     report_type: "periodic",
     branch_id: branchId,
-    start_date: isoDate(periodStart(period)),
-    end_date: isoDate(periodEnd(period)),
+    start_date: isoDate(week.start),
+    end_date: isoDate(week.end),
   }
 }
 

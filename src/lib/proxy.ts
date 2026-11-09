@@ -32,7 +32,10 @@ export async function forwardToBackend(request: Request, stripPrefix: string) {
     headers,
     body: hasBody ? await request.arrayBuffer() : undefined,
     cache: "no-store",
-    redirect: "manual",
+    // Django's APPEND_SLASH answers some GETs with a 301 to the same path
+    // plus "/". Follow it here (same host, so the auth header is kept); the
+    // browser couldn't, since only a few response headers are passed on.
+    redirect: hasBody ? "manual" : "follow",
   })
 
   const responseHeaders = new Headers()

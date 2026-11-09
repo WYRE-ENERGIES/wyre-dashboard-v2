@@ -14,8 +14,6 @@ import type {
   SolarWeather,
   SolarYield,
 } from "@/lib/api/solar-types"
-import { DEMO } from "@/lib/demo"
-import { demoSolar } from "@/lib/demo-data/solar"
 import {
   num,
   optionalNum,
@@ -30,14 +28,8 @@ import {
 // `solar/site-status/` is no longer called: production replaced it with
 // `solar/live/`.
 
-async function get<T>(
-  path: string,
-  demo: () => Promise<unknown>,
-  signal?: AbortSignal
-) {
-  return unwrapSolar<T>(
-    DEMO ? await demo() : await apiRequest<unknown>(path, { signal })
-  )
+async function get<T>(path: string, signal?: AbortSignal) {
+  return unwrapSolar<T>(await apiRequest<unknown>(path, { signal }))
 }
 
 /** `?year=&month=[&day=]` — the yield filter and the hourly plots take the
@@ -51,7 +43,6 @@ export async function getSolarWeather(
 ): Promise<SolarWeather> {
   const body = await get<RawSolarOverview>(
     `solar/overview/${branchId}/`,
-    () => demoSolar.overview(),
     signal
   )
   const w = body?.weather
@@ -67,13 +58,7 @@ export async function getSolarLive(
   branchId: number,
   signal?: AbortSignal
 ): Promise<SolarLive> {
-  return parseLive(
-    await get<RawSolarLive>(
-      `solar/live/${branchId}/`,
-      () => demoSolar.live(),
-      signal
-    )
-  )
+  return parseLive(await get<RawSolarLive>(`solar/live/${branchId}/`, signal))
 }
 
 /** Yield totals. No date = all time (with today / this month buckets); a
@@ -85,9 +70,7 @@ export async function getSolarYield(
   signal?: AbortSignal
 ): Promise<SolarYield> {
   const path = `solar/yield/${branchId}/${date ? dateQuery(date) : ""}`
-  return parseYield(
-    await get<RawSolarYield>(path, () => demoSolar.yield(date), signal)
-  )
+  return parseYield(await get<RawSolarYield>(path, signal))
 }
 
 export async function getConsumptionPlot(
@@ -97,7 +80,6 @@ export async function getConsumptionPlot(
 ): Promise<SolarConsumptionPlot> {
   const body = await get<RawConsumptionPlot>(
     `solar/${branchId}/consumption-hourly-plot/${dateQuery(date)}`,
-    () => demoSolar.consumptionPlot(date),
     signal
   )
   return {
@@ -119,7 +101,6 @@ export async function getPvPlot(
 ): Promise<SolarPvPlot> {
   const body = await get<RawPvPlot>(
     `solar/${branchId}/pv-production-hourly-plot/${dateQuery(date)}`,
-    () => demoSolar.pvPlot(date),
     signal
   )
   return {
@@ -141,7 +122,6 @@ export async function getBatteryPlot(
   return parseBatteryPlot(
     await get<RawBatteryPlot>(
       `solar/${branchId}/battery-backup-hourly-plot/${dateQuery(date)}`,
-      () => demoSolar.batteryPlot(date),
       signal
     )
   )

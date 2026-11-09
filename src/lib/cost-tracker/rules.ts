@@ -126,11 +126,13 @@ export const monthLabel = (d: Date) => format(d, "MMM yyyy")
 
 /**
  * Cost data is monthly, so the overview shows the months inside the global
- * period: Year → its months (up to now), Month or Day → that month. Replaces
+ * period: Year → its months (up to now), Month or Day → that month, a day
+ * range → the months it touches. Replaces
  * the old rolling 12 months (inventory §8 "Cost Tracker").
  */
 export function monthsInPeriod(period: Period) {
-  if (period.kind !== "year") return [startOfMonth(period.anchor)]
+  if (period.kind === "day" || period.kind === "month")
+    return [startOfMonth(period.anchor)]
   return eachMonthOfInterval({
     start: periodStart(period),
     end: periodEnd(period),
