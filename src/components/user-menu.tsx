@@ -6,6 +6,7 @@ import {
   KeyRoundIcon,
   LogOutIcon,
   MoonIcon,
+  PanelLeftIcon,
   SunIcon,
   UserIcon,
 } from "lucide-react"
@@ -20,7 +21,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -28,6 +34,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useCloseOnMobile } from "@/components/use-close-on-mobile"
+import {
+  setSidebarStyle,
+  SIDEBAR_STYLES,
+  useSidebarStyle,
+  type SidebarStyle,
+} from "@/lib/sidebar-style"
 import { cn } from "@/lib/utils"
 
 export function UserMenu() {
@@ -35,6 +48,12 @@ export function UserMenu() {
   const { signOut } = useSession()
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
+  const sidebarStyle = useSidebarStyle()
+  const closeOnMobile = useCloseOnMobile()
+  const go = (href: string) => {
+    closeOnMobile()
+    router.push(href)
+  }
 
   const name =
     [claims.first_name, claims.last_name].filter(Boolean).join(" ") ||
@@ -82,11 +101,11 @@ export function UserMenu() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/personal-data")}>
+              <DropdownMenuItem onClick={() => go("/personal-data")}>
                 <UserIcon />
                 Personal data
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/password")}>
+              <DropdownMenuItem onClick={() => go("/password")}>
                 <KeyRoundIcon />
                 Change password
               </DropdownMenuItem>
@@ -100,6 +119,34 @@ export function UserMenu() {
               {resolvedTheme === "dark" ? <SunIcon /> : <MoonIcon />}
               {resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <PanelLeftIcon />
+                Sidebar style
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-64">
+                <DropdownMenuRadioGroup
+                  value={sidebarStyle.value}
+                  onValueChange={(value) =>
+                    setSidebarStyle(value as SidebarStyle)
+                  }
+                >
+                  {SIDEBAR_STYLES.map((style) => (
+                    <DropdownMenuRadioItem
+                      key={style.value}
+                      value={style.value}
+                    >
+                      <span className="flex flex-col">
+                        <span>{style.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {style.description}
+                        </span>
+                      </span>
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {

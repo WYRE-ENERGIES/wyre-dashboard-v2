@@ -280,11 +280,7 @@ function DeviceSection({
                 </LineChart>
               </ChartContainer>
             )}
-            <DataTable
-              columns={columns}
-              data={s.tableRows}
-              pageSize={granularity === "hourly" ? 12 : 10}
-            />
+            <DataTable columns={columns} data={s.tableRows} />
           </>
         )}
       </CardContent>

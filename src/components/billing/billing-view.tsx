@@ -317,7 +317,6 @@ function DeviceBillsTable({
             columns={columns}
             data={rows}
             isLoading={state.loading}
-            pageSize={false}
             emptyText="No billed devices in the current selection."
             footer={{
               name: "Total",

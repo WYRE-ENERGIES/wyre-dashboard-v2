@@ -260,13 +260,6 @@ export function EnergyConsumptionView() {
               data={series.tableRows}
               isLoading={query.isPending}
               footer={footer}
-              pageSize={
-                granularity === "hourly"
-                  ? 24
-                  : granularity === "daily"
-                    ? 31
-                    : 12
-              }
             />
           )}
         </CardContent>

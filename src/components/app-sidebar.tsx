@@ -41,16 +41,29 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { useCloseOnMobile } from "@/components/use-close-on-mobile"
 import { visibleNav, type NavKey } from "@/lib/gating"
+import { useSidebarStyle } from "@/lib/sidebar-style"
+import { cn } from "@/lib/utils"
 
 type NavLink = { title: string; href: string; ready: boolean }
-type NavItem = NavLink & { key: NavKey; icon: LucideIcon; children?: NavLink[] }
+type Section = "Monitor" | "Analyse" | "Manage"
+type NavItem = NavLink & {
+  key: NavKey
+  icon: LucideIcon
+  /** Heading the item sits under in the grouped sidebar styles. */
+  section: Section
+  children?: NavLink[]
+}
+
+const SECTIONS: Section[] = ["Monitor", "Analyse", "Manage"]
 
 // Paths match the old app so bookmarks and email links keep working.
 // `ready: false` items show a "Soon" badge until their page is rebuilt.
 const NAV: NavItem[] = [
   {
     key: "dashboard",
+    section: "Monitor",
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboardIcon,
@@ -58,6 +71,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "load-overview",
+    section: "Monitor",
     title: "Load Overview",
     href: "/load-overview",
     icon: ChartPieIcon,
@@ -65,6 +79,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "diesel",
+    section: "Monitor",
     title: "Diesel Overview",
     href: "/diesel-overview",
     icon: FuelIcon,
@@ -72,6 +87,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "solar",
+    section: "Monitor",
     title: "Solar Overview",
     href: "/solar-overview",
     icon: SunIcon,
@@ -79,6 +95,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "parameters",
+    section: "Monitor",
     title: "Parameters",
     href: "/parameters/energy-consumption",
     icon: ActivityIcon,
@@ -101,6 +118,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "score-card",
+    section: "Analyse",
     title: "Score Card",
     href: "/score-card",
     icon: GaugeIcon,
@@ -108,6 +126,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "cost-tracker",
+    section: "Analyse",
     title: "Cost Tracker",
     href: "/cost-tracker",
     icon: WalletIcon,
@@ -115,6 +134,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "billing",
+    section: "Analyse",
     title: "Billing",
     href: "/billing",
     icon: ReceiptIcon,
@@ -122,6 +142,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "report",
+    section: "Analyse",
     title: "Report",
     href: "/report",
     icon: FileTextIcon,
@@ -129,6 +150,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "alerts",
+    section: "Manage",
     title: "Alerts and Alarms",
     href: "/alerts-and-alarms",
     icon: BellIcon,
@@ -136,6 +158,7 @@ const NAV: NavItem[] = [
   },
   {
     key: "breakers",
+    section: "Manage",
     title: "Breakers",
     href: "/breakers",
     icon: ToggleRightIcon,
@@ -158,61 +181,83 @@ export function AppSidebar() {
   const claims = useClaims()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const style = useSidebarStyle()
+  const closeOnMobile = useCloseOnMobile()
   const visible = visibleNav(claims)
   // Carry the global period across pages.
   const query = searchParams.toString()
   const withQuery = (href: string) => (query ? `${href}?${query}` : href)
+  const items = NAV.filter((item) => visible.has(item.key))
+  // Grouped styles split the menu into sections; the others list it flat
+  // under the organisation's name.
+  const groups = style.grouped
+    ? SECTIONS.map((section) => ({
+        label: section,
+        items: items.filter((item) => item.section === section),
+      })).filter((group) => group.items.length > 0)
+    : [{ label: claims.client, items }]
+  const darkSidebar = style.value === "classic" || style.value === "ink"
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3">
         <div className="flex h-8 items-center px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <WyreLogo className="h-7 text-brand" />
+          <WyreLogo
+            className={cn("h-7", darkSidebar ? "text-white" : "text-brand")}
+          />
         </div>
         <BranchSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>{claims.client}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="group-data-[collapsible=icon]:items-center">
-              {NAV.filter((item) => visible.has(item.key)).map((item) =>
-                item.children ? (
-                  <NavGroup
-                    key={item.key}
-                    item={item}
-                    pathname={pathname}
-                    withQuery={withQuery}
-                  />
-                ) : (
-                  <SidebarMenuItem key={item.key}>
-                    {item.ready ? (
-                      <SidebarMenuButton
-                        className={RAIL_BUTTON}
-                        tooltip={item.title}
-                        isActive={pathname.startsWith(item.href)}
-                        render={<Link href={withQuery(item.href)} />}
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    ) : (
-                      <SidebarMenuButton
-                        className={RAIL_BUTTON}
-                        tooltip={`${item.title} (coming soon)`}
-                        disabled
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                        <SoonBadge />
-                      </SidebarMenuButton>
-                    )}
-                  </SidebarMenuItem>
-                )
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {groups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="group-data-[collapsible=icon]:items-center">
+                {group.items.map((item) =>
+                  item.children ? (
+                    <NavGroup
+                      key={item.key}
+                      item={item}
+                      pathname={pathname}
+                      withQuery={withQuery}
+                      onNavigate={closeOnMobile}
+                    />
+                  ) : (
+                    <SidebarMenuItem key={item.key}>
+                      {item.ready ? (
+                        <SidebarMenuButton
+                          className={RAIL_BUTTON}
+                          tooltip={item.title}
+                          isActive={pathname.startsWith(item.href)}
+                          render={
+                            <Link
+                              href={withQuery(item.href)}
+                              onClick={closeOnMobile}
+                            />
+                          }
+                        >
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                      ) : (
+                        <SidebarMenuButton
+                          className={RAIL_BUTTON}
+                          tooltip={`${item.title} (coming soon)`}
+                          disabled
+                        >
+                          <item.icon />
+                          <span>{item.title}</span>
+                          <SoonBadge />
+                        </SidebarMenuButton>
+                      )}
+                    </SidebarMenuItem>
+                  )
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <UserMenu />
@@ -228,10 +273,12 @@ function NavGroup({
   item,
   pathname,
   withQuery,
+  onNavigate,
 }: {
   item: NavItem
   pathname: string
   withQuery: (href: string) => string
+  onNavigate: () => void
 }) {
   const children = item.children ?? []
   const anyReady = children.some((c) => c.ready)
@@ -265,7 +312,9 @@ function NavGroup({
               {child.ready ? (
                 <SidebarMenuSubButton
                   isActive={pathname.startsWith(child.href)}
-                  render={<Link href={withQuery(child.href)} />}
+                  render={
+                    <Link href={withQuery(child.href)} onClick={onNavigate} />
+                  }
                 >
                   <span>{child.title}</span>
                 </SidebarMenuSubButton>

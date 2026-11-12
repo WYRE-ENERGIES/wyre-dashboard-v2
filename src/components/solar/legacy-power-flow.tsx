@@ -174,7 +174,7 @@ export function LegacyPowerFlow({ live }: { live: SolarLive }) {
   return (
     // The old dashboard's white card; colours come from the --lf-* tokens in
     // globals.css, so dark mode gets a dark card with brighter line work.
-    <div className="legacy-flow rounded-lg border bg-card py-2">
+    <div className="legacy-flow rounded-lg bg-card py-2">
       <svg
         width="100%"
         height="320"

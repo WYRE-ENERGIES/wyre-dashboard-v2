@@ -237,7 +237,6 @@ function BreakersContent({ branchId }: { branchId: number }) {
               columns={columns}
               data={breakers}
               isLoading={query.isPending}
-              pageSize={false}
               emptyText={
                 selectedDeviceIds.length
                   ? "None of the selected devices has a remote breaker."

@@ -128,7 +128,7 @@ Brand colours are defined in `src/app/globals.css`:
 - **Neutrals:** carry a faint purple tint.
 - **Charts:** use purple shades `--chart-1`…`--chart-4`, with yellow (`--chart-5`) reserved for solar.
 
-Dark mode is in the user menu.
+The app opens in light mode; dark mode is in the user menu.
 
 ## Adding a page
 

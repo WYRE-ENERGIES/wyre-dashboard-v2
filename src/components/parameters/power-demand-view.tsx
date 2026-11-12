@@ -193,7 +193,6 @@ export function PowerDemandView() {
               columns={columns}
               data={d.tableRows}
               isLoading={query.isPending}
-              pageSize={20}
             />
           )}
         </CardContent>

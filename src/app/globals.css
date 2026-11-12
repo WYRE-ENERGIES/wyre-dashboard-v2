@@ -210,6 +210,129 @@
   --lf-caption: var(--muted-foreground);
 }
 
+/* Sidebar styles to compare (user menu → Sidebar style, lib/sidebar-style).
+   Each sets the sidebar tokens inside the sidebar only ([data-sidebar]
+   covers the desktop panel and the mobile sheet); "standard" uses the
+   theme as is. The text colour is set here too: the desktop panel inherits
+   it from an outer wrapper that these tokens don't reach. The active page
+   gets a full highlight in each style's accent. */
+
+html:is(
+    [data-nav-style="classic"],
+    [data-nav-style="ink"],
+    [data-nav-style="minimal"]
+  )
+  [data-sidebar="sidebar"] {
+  color: var(--sidebar-foreground);
+}
+
+/* Wyre classic: brand purple panel, as on the current dashboard; the
+   active page is white with purple text. */
+html[data-nav-style="classic"] [data-sidebar="sidebar"] {
+  --sidebar: oklch(0.407 0.206 298.1);
+  --sidebar-foreground: oklch(0.95 0.02 298);
+  --sidebar-accent: oklch(1 0 0 / 13%);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-primary: var(--highlight);
+  --sidebar-border: oklch(1 0 0 / 14%);
+  --sidebar-ring: var(--highlight);
+  --sidebar-active: oklch(1 0 0);
+  --sidebar-active-foreground: oklch(0.407 0.206 298.1);
+  --muted-foreground: oklch(0.84 0.05 298);
+}
+html.dark[data-nav-style="classic"] [data-sidebar="sidebar"] {
+  --sidebar: oklch(0.27 0.12 298);
+  --sidebar-active-foreground: oklch(0.27 0.12 298);
+}
+html[data-nav-style="classic"]
+  [data-sidebar="sidebar"]
+  [data-slot="branch-mark"] {
+  background: oklch(1 0 0 / 16%);
+}
+
+/* Ink: near-black panel in both themes; the active page is white. */
+html[data-nav-style="ink"] [data-sidebar="sidebar"] {
+  --sidebar: oklch(0.19 0.012 298);
+  --sidebar-foreground: oklch(0.85 0.01 298);
+  --sidebar-accent: oklch(1 0 0 / 8%);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-primary: var(--highlight);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: var(--highlight);
+  --sidebar-active: oklch(1 0 0);
+  --sidebar-active-foreground: oklch(0.19 0.012 298);
+  --muted-foreground: oklch(0.65 0.012 298);
+}
+html.dark[data-nav-style="ink"] [data-sidebar="sidebar"] {
+  --sidebar: oklch(0.13 0.008 298);
+}
+
+/* Minimal: page-coloured panel, no fills; the active page is brand purple. */
+html[data-nav-style="minimal"] [data-sidebar="sidebar"] {
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-primary: var(--brand);
+  --sidebar-border: var(--border);
+  --sidebar-active: var(--brand);
+  --sidebar-active-foreground: var(--brand-foreground);
+}
+html[data-nav-style="minimal"]
+  [data-sidebar="sidebar"]
+  [data-slot="branch-mark"] {
+  background: transparent;
+  color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* The avatars on the dark panels: a translucent tile, not a white one. */
+html:is([data-nav-style="classic"], [data-nav-style="ink"])
+  [data-sidebar="sidebar"]
+  [data-slot="avatar-fallback"] {
+  background: oklch(1 0 0 / 14%);
+  color: var(--sidebar-foreground);
+}
+
+/* Active page: a full highlight (icon included) in the style's accent. */
+html:is(
+    [data-nav-style="classic"],
+    [data-nav-style="ink"],
+    [data-nav-style="minimal"]
+  )
+  [data-sidebar="sidebar"]
+  :is(
+    [data-slot="sidebar-menu-button"],
+    [data-slot="sidebar-menu-sub-button"]
+  )[data-active] {
+  background: var(--sidebar-active);
+  color: var(--sidebar-active-foreground);
+  font-weight: 600;
+}
+html:is(
+    [data-nav-style="classic"],
+    [data-nav-style="ink"],
+    [data-nav-style="minimal"]
+  )
+  [data-sidebar="sidebar"]
+  :is(
+    [data-slot="sidebar-menu-button"],
+    [data-slot="sidebar-menu-sub-button"]
+  )[data-active]
+  svg {
+  color: currentColor;
+}
+
+/* Section headings in the grouped styles. */
+html:is([data-nav-style="ink"], [data-nav-style="minimal"])
+  [data-sidebar="sidebar"]
+  [data-slot="sidebar-group-label"] {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 /* Pages whose controls (switches, toggles, buttons) use the brand purple in
    light mode too, as they do in dark mode. */
 :root:not(.dark) .brand-controls {

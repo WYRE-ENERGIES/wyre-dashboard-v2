@@ -574,7 +574,6 @@ function LoadTable({
           columns={columns}
           data={rows}
           isLoading={loading}
-          pageSize={false}
           className="overflow-x-auto"
         />
       </CardContent>

@@ -157,7 +157,6 @@ export function DieselOverviewCard({
         columns={columns}
         data={rows}
         isLoading={isLoading}
-        pageSize={false}
         emptyText="No diesel overview for this period."
         footer={
           rows.length > 1
@@ -267,7 +266,6 @@ export function UtilityOverviewCard({
         columns={columns}
         data={rows}
         isLoading={isLoading}
-        pageSize={false}
         emptyText={`No ${title.toLowerCase()} for this period.`}
         footer={
           rows.length > 1

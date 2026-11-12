@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Spinner } from "@/components/ui/spinner"
+import { useCloseOnMobile } from "@/components/use-close-on-mobile"
 import { getPermittedBranches, getSideBar } from "@/lib/api/endpoints"
 import { cn } from "@/lib/utils"
 
@@ -30,6 +31,7 @@ export function BranchSwitcher() {
   const claims = useClaims()
   const { switchBranch } = useSession()
   const [switching, setSwitching] = React.useState(false)
+  const closeOnMobile = useCloseOnMobile()
 
   const sideBar = useQuery({ queryKey: ["side-bar"], queryFn: getSideBar })
   const permitted = useQuery({
@@ -48,6 +50,8 @@ export function BranchSwitcher() {
 
   async function onSelect(branchId: number, name: string) {
     if (branchId === claims.branch_id) return
+    // The page reloads with the new branch's data: show it.
+    closeOnMobile()
     setSwitching(true)
     try {
       await switchBranch(branchId)
@@ -65,7 +69,10 @@ export function BranchSwitcher() {
       tooltip={currentName}
       className={cn("data-popup-open:bg-sidebar-accent", RAIL_BUTTON)}
     >
-      <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand text-brand-foreground">
+      <div
+        data-slot="branch-mark"
+        className="flex aspect-square size-8 items-center justify-center rounded-lg bg-brand text-brand-foreground"
+      >
         {switching ? <Spinner /> : <BuildingIcon className="size-4" />}
       </div>
       <div className="grid flex-1 text-left text-sm leading-tight">

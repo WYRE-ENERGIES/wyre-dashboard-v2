@@ -32,18 +32,22 @@ import {
 import { cn } from "@/lib/utils"
 
 /**
- * The app's table: sortable headers, client-side pagination, loading and
- * empty states, and an optional footer row (totals). Column `meta.align`
- * set to "right" right-aligns numbers.
+ * The app's table: sortable headers, client-side pagination (at most
+ * MAX_PAGE_SIZE rows a page), loading and empty states, and an optional
+ * footer row (totals). Column `meta.align` set to "right" right-aligns
+ * numbers.
  *
  *   <DataTable columns={columns} data={rows} isLoading={query.isPending} />
  */
+/** No table shows more rows than this at once; the rest are on later pages. */
+export const MAX_PAGE_SIZE = 10
+
 export function DataTable<TData>({
   columns,
   data,
   isLoading = false,
   emptyText = "No data for this period.",
-  pageSize = 10,
+  pageSize = MAX_PAGE_SIZE,
   footer,
   className,
 }: {
@@ -51,14 +55,14 @@ export function DataTable<TData>({
   data: TData[]
   isLoading?: boolean
   emptyText?: string
-  /** Rows per page; `false` shows every row. */
-  pageSize?: number | false
+  /** Rows per page, capped at MAX_PAGE_SIZE. */
+  pageSize?: number
   /** Cells for a totals row, keyed by column id. */
   footer?: Record<string, React.ReactNode>
   className?: string
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const paginate = pageSize !== false
+  const size = Math.max(1, Math.min(pageSize, MAX_PAGE_SIZE))
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table v8 is not compiler-safe yet
   const table = useReactTable({
     data,
@@ -67,12 +71,8 @@ export function DataTable<TData>({
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    ...(paginate
-      ? {
-          getPaginationRowModel: getPaginationRowModel(),
-          initialState: { pagination: { pageSize } },
-        }
-      : {}),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: size } },
   })
 
   const align = (meta: unknown) =>
@@ -193,35 +193,81 @@ export function DataTable<TData>({
           )}
         </Table>
       </div>
-      {paginate && table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
-          <span>
-            {data.length} {data.length === 1 ? "row" : "rows"} · page{" "}
-            {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Previous page"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Next page"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      )}
+      {table.getPageCount() > 1 && <Pager table={table} total={data.length} />}
     </div>
   )
+}
+
+/** "1–10 of 24 rows", then previous, page numbers and next. */
+function Pager<TData>({
+  table,
+  total,
+}: {
+  table: ReturnType<typeof useReactTable<TData>>
+  total: number
+}) {
+  const { pageIndex, pageSize } = table.getState().pagination
+  const pages = table.getPageCount()
+  const first = pageIndex * pageSize + 1
+  const last = Math.min(total, first + pageSize - 1)
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+      <span className="tabular-nums">
+        {first}–{last} of {total} rows
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Previous page"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          <ChevronLeftIcon />
+        </Button>
+        {pageNumbers(pageIndex, pages).map((page, i) =>
+          page === null ? (
+            <span key={`gap-${i}`} className="px-1" aria-hidden>
+              …
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={page === pageIndex ? "secondary" : "ghost"}
+              size="icon-sm"
+              aria-label={`Page ${page + 1}`}
+              aria-current={page === pageIndex ? "page" : undefined}
+              className="tabular-nums"
+              onClick={() => table.setPageIndex(page)}
+            >
+              {page + 1}
+            </Button>
+          )
+        )}
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Next page"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          <ChevronRightIcon />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Zero-based page indexes to show, with `null` for a gap: the first and
+ * last page, and the current page with one neighbour on each side. */
+function pageNumbers(current: number, count: number): Array<number | null> {
+  const keep = new Set([0, count - 1, current - 1, current, current + 1])
+  const out: Array<number | null> = []
+  for (let page = 0; page < count; page++) {
+    if (!keep.has(page)) continue
+    const previous = out.at(-1)
+    if (typeof previous === "number" && page - previous > 1) out.push(null)
+    out.push(page)
+  }
+  return out
 }

@@ -27,16 +27,30 @@ export async function forwardToBackend(request: Request, stripPrefix: string) {
   }
 
   const hasBody = !["GET", "HEAD"].includes(request.method)
-  const upstream = await fetch(target, {
-    method: request.method,
-    headers,
-    body: hasBody ? await request.arrayBuffer() : undefined,
-    cache: "no-store",
-    // Django's APPEND_SLASH answers some GETs with a 301 to the same path
-    // plus "/". Follow it here (same host, so the auth header is kept); the
-    // browser couldn't, since only a few response headers are passed on.
-    redirect: hasBody ? "manual" : "follow",
-  })
+  let upstream: Response
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      body: hasBody ? await request.arrayBuffer() : undefined,
+      cache: "no-store",
+      // Django's APPEND_SLASH answers some GETs with a 301 to the same path
+      // plus "/". Follow it here (same host, so the auth header is kept); the
+      // browser couldn't, since only a few response headers are passed on.
+      redirect: hasBody ? "manual" : "follow",
+      // Reads the page no longer needs (it navigated away, or React's dev
+      // double-mount cancelled the first copy) are dropped upstream too,
+      // instead of the backend finishing them for nobody. Writes always run
+      // to the end.
+      signal: hasBody ? undefined : request.signal,
+    })
+  } catch (error) {
+    if (request.signal.aborted) {
+      // 499: client closed the request (nginx convention); nobody reads it.
+      return new Response(null, { status: 499 })
+    }
+    throw error
+  }
 
   const responseHeaders = new Headers()
   for (const name of FORWARDED_RESPONSE_HEADERS) {

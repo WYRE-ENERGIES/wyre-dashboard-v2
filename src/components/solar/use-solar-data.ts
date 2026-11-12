@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { startOfDay, startOfMonth } from "date-fns"
 import { useEffect, useRef, useState } from "react"
 
 import { useFilters } from "@/components/filters-provider"
@@ -14,7 +15,7 @@ import {
   getSolarYield,
 } from "@/lib/api/solar"
 import type { SolarDate } from "@/lib/api/solar-types"
-import { serializePeriod } from "@/lib/period"
+import { serializePeriod, type Period } from "@/lib/period"
 import {
   LIVE_IDLE_MS,
   livePollMs,
@@ -170,6 +171,23 @@ export function useSolarData() {
         : getSolarYield(branchId, periodSolarDate(period), signal),
   })
 
+  // Today and the current month, shown under the selected period in the
+  // Energy summary as on the old card. Same keys as `summary` for those
+  // periods, so they share its cache when the page shows today or this month.
+  const yieldFor = (p: Period) => {
+    const s = serializePeriod(p)
+    return {
+      queryKey: ["solar", "yield", branchId, s.view, s.date],
+      queryFn: ({ signal }: { signal?: AbortSignal }) =>
+        getSolarYield(branchId, periodSolarDate(p), signal),
+    }
+  }
+  const now = new Date()
+  const today = useQuery(yieldFor({ kind: "day", anchor: startOfDay(now) }))
+  const thisMonth = useQuery(
+    yieldFor({ kind: "month", anchor: startOfMonth(now) })
+  )
+
   const consumption = useQuery({
     queryKey: ["solar", "consumption-hourly-plot", ...key],
     queryFn: ({ signal }) => getConsumptionPlot(branchId, day!, signal),
@@ -187,12 +205,14 @@ export function useSolarData() {
   })
   // Daily state of charge for a month or range: each day's hourly plot,
   // averaged. A year would need ~365 requests, so it has no SOC line until
-  // the series endpoint carries SOC (proposal E10).
+  // the series endpoint carries SOC (proposal E10). It's the least important
+  // data on the page, so it starts after the summary and daily series and
+  // runs two at a time, leaving the browser's connections to the cards.
   const dailySoc = useQuery({
     queryKey: ["solar", "battery-daily-soc", ...key],
     queryFn: async ({ signal }) => {
       const days = periodBuckets(period)
-      const plots = await mapLimit(days, 4, (b) =>
+      const plots = await mapLimit(days, 2, (b) =>
         getBatteryPlot(
           branchId,
           { year: b.year, month: b.month, day: b.day! },
@@ -201,7 +221,10 @@ export function useSolarData() {
       )
       return new Map(days.map((b, i) => [b.key, averageSoc(plots[i])]))
     },
-    enabled: period.kind === "month" || period.kind === "range",
+    enabled:
+      (period.kind === "month" || period.kind === "range") &&
+      summary.isSuccess &&
+      series.isSuccess,
   })
 
   const rows = (series.data ?? []).map((b) => seriesRow(b.key, b.yield))
@@ -211,6 +234,8 @@ export function useSolarData() {
     period,
     weather,
     summary,
+    today,
+    thisMonth,
     series,
     rows,
     consumption,

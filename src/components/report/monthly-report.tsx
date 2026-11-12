@@ -224,7 +224,6 @@ function MonthlyReportBody({ report }: { report: MonthlyReportModel }) {
             hint="Helps you plan an alternative energy source, especially for weekends, to cut cost."
           >
             <DataTable
-              pageSize={false}
               data={report.powerDemand.breakdown}
               columns={breakdownColumns}
               footer={{
@@ -247,11 +246,7 @@ function MonthlyReportBody({ report }: { report: MonthlyReportModel }) {
             hint="Time, energy and cost wasted by running generators outside operating hours."
             className={report.isSolar ? "xl:col-span-2" : undefined}
           >
-            <DataTable
-              pageSize={false}
-              data={report.deviationRows}
-              columns={deviationColumns}
-            />
+            <DataTable data={report.deviationRows} columns={deviationColumns} />
           </ReportCard>
         )}
       </div>
@@ -303,11 +298,7 @@ function MonthlyReportBody({ report }: { report: MonthlyReportModel }) {
           action={<Badge>Band {report.bands.letter}</Badge>}
           hint="Utility supply hours against the hours your tariff band promises. Band from achieved hours: over 540 h A, over 432 h B, over 324 h C, over 216 h D, otherwise E."
         >
-          <DataTable
-            pageSize={false}
-            data={report.bands.rows}
-            columns={bandColumns}
-          />
+          <DataTable data={report.bands.rows} columns={bandColumns} />
         </ReportCard>
       )}
       {(report.bands || report.dataEntry != null) && (
@@ -528,7 +519,6 @@ function UtilityTable({ rows }: { rows: UtilityRow[] }) {
       hint="Compares the energy your Disco billed with the energy Wyre's meter recorded, so you're not overcharged."
     >
       <DataTable
-        pageSize={false}
         data={rows}
         columns={utilityColumns}
         emptyText="No utility consumption in the last three months."
